@@ -1,0 +1,10 @@
+# default name for the executable
+chemotion
+chemotion.arm.x
+chemotion.amd.x
+chemotion.exe
+# all log files
+*.log
+# don't include the private configuration file and instances folder
+chemotion-cli.yml
+instances/
