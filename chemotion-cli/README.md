@@ -8,12 +8,12 @@ Chemotion CLI tool is there to help you manage installation(s) of Chemotion on a
 
 ### Get the binary
 
-The Chemotion CLI tool is a binary file and needs no installation. The only prerequisite is that you install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (and, on Windows, [WSL](https://docs.microsoft.com/en-us/windows/wsl/install)). Depending on your OS, you can download the lastest release of the CLI from here:
+The Chemotion CLI tool is a binary file and needs no installation. The only prerequisite is that you install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (and, on Windows, [WSL](https://docs.microsoft.com/en-us/windows/wsl/install)). Depending on your OS, you can download the lastest release of the CLI from [here](https://github.com/harivyasi/chemotion/releases/). Builds for the following systems are available:
 
-- [Linux, amd64](https://github.com/harivyasi/chemotion/releases/download/0.1.2-alpha/chemotion)
-- [Windows, amd64](https://github.com/harivyasi/chemotion/releases/download/0.1.2-alpha/chemotion.exe); remember to turn on [Docker integration with WSL](https://docs.docker.com/desktop/windows/wsl/).
-- [macOS, apple-silicon](https://github.com/harivyasi/chemotion/releases/download/0.1.2-alpha/chemotion.arm.osx)
-- [macOS, amd64](https://github.com/harivyasi/chemotion/releases/download/0.1.2-alpha/chemotion.amd.osx)
+- Linux, amd64
+- Windows, amd64; remember to turn on [Docker integration with WSL](https://docs.docker.com/desktop/windows/wsl/)
+- macOS, apple-silicon
+- macOS, amd64
 
 ### Make it an executable
 
@@ -62,6 +62,14 @@ To turn on, and off, the `chosen` instance, issue the commands:
 - `chemotion on`, and
 - `chemotion off`.
 
+### Upgrading an instance (for versions 1.3 and above)
+
+As long as you installed an instance of Chemotion using this tool, the upgrade process is quite straightforward:
+
+- First make sure that you have the latest version of this tool. You can check the version of your chemotion binary by doing `chemotion --version`. If necessary, follow the instructions in the [download](#download) section again. Feel free to replace the existing `chemotion` file. DO NOT remove/replace the `chemotion-cli.yml` file.
+- Prepare for update by running `chemotion advanced pull-image`. This will download the latest chemotion image from the internet if not already present on the system. Downloading the image outside of downtime saves you time later on.
+- Schedule a downtime of at least 15 minutes. During the downtime, run `chemotion instance update --name <instance_name>`.
+
 ### Uninstallation
 
 > :warning: be sure about what you want to do!
@@ -103,10 +111,10 @@ Following features are exist:
 - ✔ Installation & Deployment: `chemotion install` installs a production instance that is ready to use.
 - ✔ Instance life cycle commands: `chemotion on|off` and `chemotion instance status|stats|list|restart`.
 - ✔ Multiple instances: `chemotion instance add|switch|remove` can be used to manage multiple instances.
+- ✔ Upgrade: use `chemotion instance upgrade` to upgrade an existing Chemotion instance
 
 Following features are planned:
 
-- Upgrade: use `chemotion instance upgrade` to upgrade an existing Chemotion instance
 - Backups: `chemotion snapshot create|restore` to savely store your data somewhere
 - Manage Settings: `chemotion instance settings --import|--export` to import/export settings and to run auto-configuring wizards.
 - Frequently asked for features for the Chemotion Administrator: `chemotion user show|add|delete|password-reset`, `chemotion system info|rails-shell|shell`

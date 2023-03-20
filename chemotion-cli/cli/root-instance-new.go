@@ -20,6 +20,52 @@ var (
 	_root_instance_new_env_         string
 )
 
+// helper function to get a compose file
+func getCompose(use string) (compose viper.Viper) {
+	var (
+		composeFilepath pathlib.Path
+		isUrl           bool
+	)
+	// TODO: check on the version of the compose file
+	if existingFile(use) {
+		composeFilepath = *pathlib.NewPath(use)
+	} else if _, err := url.ParseRequestURI(use); err == nil {
+		isUrl = true
+		composeFilepath = downloadFile(use, workDir.String()) // downloads to the working directory
+	} else {
+		zboth.Fatal().Err(err).Msgf("Failed to parse the URL/file: %s.", use)
+	}
+	// parse the compose file
+	compose = *viper.New()
+	compose.SetConfigFile(composeFilepath.String())
+	err := compose.ReadInConfig()
+	if isUrl {
+		composeFilepath.Remove()
+	}
+	if err != nil {
+		zboth.Fatal().Err(err).Msgf("Invalid formatting for a compose file.")
+	}
+	return
+}
+
+// set unique labels and volume names in the compose file
+func setUniqueLabels(compose *viper.Viper, name string) {
+	sections := []string{"services", "volumes", "networks"}
+	for _, section := range sections {
+		subheadings := getSubHeadings(compose, section) // subheadings are the names of the services, volumes and networks
+		for _, k := range subheadings {
+			compose.Set(joinKey(section, k, "labels"), map[string]string{"net.chemotion.cli.project": name})
+		}
+	}
+	// set unique name for volumes in the compose file
+	volumes := getSubHeadings(compose, "volumes")
+	for _, volume := range volumes {
+		n := compose.GetString(joinKey("volumes", volume, "name"))
+		compose.Set(joinKey("volumes", volume, "name"), name+"_"+n)
+
+	}
+}
+
 // helper function to get a fresh (unassigned port)
 func getFreshPort(kind string) (port int) {
 	if firstRun {
@@ -121,42 +167,9 @@ func instanceCreate(givenName string, use string, kind string, givenAddress stri
 	conf.Set(joinKey("instances", givenName, "address"), address)
 	conf.Set(joinKey("instances", givenName, "port"), port)
 	// get the compose file for the instance
-	var composeFilepath pathlib.Path // TODO: check on the version of the compose file
-	var isUrl bool = false
-	if existingFile(use) {
-		composeFilepath = *pathlib.NewPath(use)
-	} else if _, err := url.ParseRequestURI(use); err == nil {
-		isUrl = true
-		composeFilepath = downloadFile(use, workDir.String()) // downloads to the working directory
-	} else {
-		zboth.Fatal().Err(err).Msgf("Failed to parse the URL/file: %s.", use)
-	}
-	// parse the compose file
-	compose.SetConfigFile(composeFilepath.String())
-	if err := compose.ReadInConfig(); err == nil {
-		if isUrl {
-			composeFilepath.Remove()
-		}
-	} else {
-		if isUrl {
-			composeFilepath.Remove()
-		}
-		zboth.Fatal().Err(err).Msgf("Invalid formatting for a compose file.")
-	}
-	// set labels in the compose file
-	sections := []string{"services", "volumes", "networks"}
-	for _, section := range sections {
-		subheadings, _ := getKeysValues(&compose, section) // subheadings are the names of the services, volumes and networks
-		for _, k := range subheadings {
-			compose.Set(joinKey(section, k, "labels"), map[string]string{"net.chemotion.cli.project": name})
-		}
-	}
-	// set unique name for volumes in the compose file
-	volumes, _ := getKeysValues(&compose, "volumes")
-	for _, volume := range volumes {
-		n := compose.GetString(joinKey("volumes", volume, "name"))
-		compose.Set(joinKey("volumes", volume, "name"), name+"_"+n)
-	}
+	compose := getCompose(use)
+	// for some reason (no idea why), labels must be set before port
+	setUniqueLabels(&compose, name)
 	// set the port in the compose file
 	compose.Set(joinKey("services", "eln", "ports"), []string{fmt.Sprintf("%d:4000", port)})
 	zboth.Info().Msgf("Creating a new instance of %s called %s.", nameCLI, name)
@@ -164,9 +177,9 @@ func instanceCreate(givenName string, use string, kind string, givenAddress stri
 	if err := workDir.Join(instancesFolder, name).MkdirAll(); err != nil {
 		zboth.Fatal().Err(err).Msgf("Unable to create folder to store instances of %s.", nameCLI)
 	}
-	if _, err, _ := gotoFolder(givenName), compose.WriteConfigAs(composeFilename), gotoFolder("workdir"); err == nil {
+	if _, err, _ := gotoFolder(givenName), compose.WriteConfigAs(defaultComposeFilename), gotoFolder("workdir"); err == nil {
 		zboth.Info().Msgf("Written compose file %s in the above step.", compose.ConfigFileUsed())
-		commandStr := fmt.Sprintf("compose -f %s up --no-start", composeFilename)
+		commandStr := fmt.Sprintf("compose -f %s up --no-start", defaultComposeFilename)
 		zboth.Info().Msgf("Starting %s with command: %s", virtualizer, commandStr)
 		if _, worked, _ := gotoFolder(givenName), callVirtualizer(commandStr), gotoFolder("workdir"); !worked {
 			success = worked
@@ -248,7 +261,7 @@ var newInstanceRootCmd = &cobra.Command{
 func init() {
 	instanceRootCmd.AddCommand(newInstanceRootCmd)
 	newInstanceRootCmd.Flags().StringVar(&_root_instance_new_name_, "name", instanceDefault, "Name for the new instance")
-	newInstanceRootCmd.Flags().StringVar(&_root_instance_new_use_, "use", composeURL, "URL or filepath to use for creating the instance")
+	newInstanceRootCmd.Flags().StringVar(&_root_instance_new_use_, "use", composeURL, "URL or filepath of the compose file to use for creating the instance")
 	newInstanceRootCmd.Flags().StringVar(&_root_instance_new_address_, "address", addressDefault, "Web-address (or hostname) for accessing the instance")
 	newInstanceRootCmd.Flags().StringVar(&_root_instance_new_env_, "env", "", ".env file for the new instance")
 	newInstanceRootCmd.Flags().BoolVar(&_root_instance_new_development_, "development", false, "Create a development instance")

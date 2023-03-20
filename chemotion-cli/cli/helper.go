@@ -111,7 +111,7 @@ func getNewUniqueID() string {
 func downloadFile(fileURL string, downloadLocation string) (filepath pathlib.Path) {
 	if resp, err := grab.Get(downloadLocation, fileURL); err == nil {
 		zboth.Info().Msgf("Downloaded file saved as: %s", resp.Filename)
-		filepath = *pathlib.NewPath(downloadLocation).Join(resp.Filename)
+		filepath = *pathlib.NewPath(resp.Filename)
 	} else {
 		zboth.Fatal().Err(err).Msgf("Failed to download file from: %s. Check log. ABORT!", fileURL)
 	}
@@ -146,10 +146,9 @@ func waitProgressBar(seconds int, message []string) {
 // }
 
 // to manage config files as loaded into Viper
-func getKeysValues(configuration *viper.Viper, key string) (keys, values []string) {
-	for k, v := range configuration.GetStringMapString(key) {
-		keys = append(keys, k)
-		values = append(values, v)
+func getSubHeadings(configuration *viper.Viper, key string) (subheadings []string) {
+	for k := range configuration.GetStringMapString(key) {
+		subheadings = append(subheadings, k)
 	}
 	return
 }
@@ -165,7 +164,7 @@ var toLower = strings.ToLower
 
 // to get all existing instances as determined by the configuration file
 func allInstances() (instances []string) {
-	instances, _ = getKeysValues(&conf, "instances")
+	instances = getSubHeadings(&conf, "instances")
 	return
 }
 

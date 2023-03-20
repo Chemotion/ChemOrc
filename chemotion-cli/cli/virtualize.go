@@ -35,7 +35,7 @@ func confirmVirtualizer(minimum string) {
 	}
 }
 
-// call to virtualizer (this must not end in fatal error)
+// call to virtualizer (this must not end in fatal error, i.e. must return success)
 func callVirtualizer(args string) (success bool) {
 	if strings.Contains(args, "busybox") {
 		zboth.Debug().Msgf("%s will now fork the execution with command `%s %s` sent to shell.", nameCLI, toLower(virtualizer), args)

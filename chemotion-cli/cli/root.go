@@ -41,24 +41,24 @@ import (
 )
 
 const (
-	versionCLI            = "0.1.2-alpha"
-	versionYAML           = "1.0"
-	nameCLI               = "Chemotion"
-	defaultConfigFilepath = "chemotion-cli.yml"
-	logFilename           = "chemotion-cli.log"
-	instanceDefault       = "initial"
-	addressDefault        = "http://localhost"
-	selector_key          = "selected" // key that is expected in the configFile to figure out the selected instance
-	stateFile             = "/.version"
-	instancesFolder       = "instances" // the folder in which chemotion expects to find all the instances
-	virtualizer           = "Docker"
-	shell                 = "bash"    // should work with linux (ubuntu, windows < WSL runs when running in powershell >, and macOS)
-	minimumVirtualizer    = "20.10.2" // so as to support docker compose files version 3.5 and avoid this: https://github.com/docker/for-mac/issues/4975 by forcing Docker Desktop >= 3.0.4
-	composeFilename       = "docker-compose.yml"
-	maxInstancesOfKind    = 64
-	firstPort             = 4000
-	composeURL            = "https://raw.githubusercontent.com/harivyasi/chemotion/chemotion-cli/docker-compose.yml"
-	rollNum               = 1 // the default index number assigned by virtualizer to every container
+	versionCLI             = "0.1.3-alpha"
+	versionYAML            = "1.0"
+	nameCLI                = "Chemotion"
+	defaultConfigFilepath  = "chemotion-cli.yml"
+	logFilename            = "chemotion-cli.log"
+	instanceDefault        = "initial"
+	addressDefault         = "http://localhost"
+	selector_key           = "selected" // key that is expected in the configFile to figure out the selected instance
+	stateFile              = "/.version"
+	instancesFolder        = "instances" // the folder in which chemotion expects to find all the instances
+	virtualizer            = "Docker"
+	shell                  = "bash"    // should work with linux (ubuntu, windows < WSL runs when running in powershell >, and macOS)
+	minimumVirtualizer     = "20.10.2" // so as to support docker compose files version 3.5 and avoid this: https://github.com/docker/for-mac/issues/4975 by forcing Docker Desktop >= 3.0.4
+	defaultComposeFilename = "docker-compose.yml"
+	maxInstancesOfKind     = 64
+	firstPort              = 4000
+	composeURL             = "https://raw.githubusercontent.com/harivyasi/chemotion/chemotion-cli/docker-compose.yml"
+	rollNum                = 1 // the default index number assigned by virtualizer to every container
 )
 
 var (
@@ -67,7 +67,6 @@ var (
 	configFile   string
 	firstRun     bool        = true // switches to false when configFile is found/given
 	conf         viper.Viper = *viper.New()
-	compose      viper.Viper = *viper.New()
 	// logging
 	zlog  zerolog.Logger
 	zboth zerolog.Logger
@@ -128,8 +127,9 @@ func init() {
 	initLog() // in logger.go
 	// initialize flags
 	zlog.Debug().Msg("Start: init(): initialize flags")
+	rootCmd.SetVersionTemplate(fmt.Sprintln("Chemotion CLI version", versionCLI))
 	// flag 1: instance, i.e. name of the instance to operate upon
-	// terminal overrides config-file, default is `default`
+	// terminal overrides config-file, default is `initial`
 	rootCmd.PersistentFlags().StringVarP(&currentState.name, "selected-instance", "i", "", fmt.Sprintf("select an existing instance of %s when starting", nameCLI))
 	// flag 2: config, the configuration file
 	// config as a flag cannot be read from the configuration file because that creates a circular dependency, default name is hard-coded
