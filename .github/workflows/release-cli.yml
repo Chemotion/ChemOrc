@@ -36,3 +36,4 @@ jobs:
             chemotion.arm.osx
             chemotion.amd.osx
             chemotion.exe
+            docker-compose.yml
