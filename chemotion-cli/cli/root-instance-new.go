@@ -182,6 +182,7 @@ func instanceCreate(givenName string, use string, kind string, givenAddress stri
 	env.Set("URL_HOST", strings.TrimPrefix(givenAddress, protocol+"://"))
 	env.Set("URL_PROTOCOL", protocol)
 	if err := env.WriteConfig(); err == nil {
+		modifyContainer(givenName, []string{"mkdir -p", "shared/pullin"})
 		if worked := modifyContainer(givenName, []string{"cp", ".env", "shared/pullin"}); !worked {
 			success = worked
 			zboth.Warn().Msgf("Failed to write .env file in `%s/shared/pullin`", name)

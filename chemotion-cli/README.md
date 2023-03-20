@@ -2,16 +2,18 @@
 
 Chemotion CLI tool is there to help you manage installation(s) of Chemotion on a machine. The goal is to make installation, maintenance and upgradation of Chemotion as easy as possible.
 
+> :information_source: [Link to quick intro video](https://youtu.be/10fk2C6qku0)
+
 ## Download
 
 ### Get the binary
 
 The Chemotion CLI tool is a binary file and needs no installation. The only prerequisite is that you install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (and, on Windows, [WSL](https://docs.microsoft.com/en-us/windows/wsl/install)). Depending on your OS, you can download the lastest release of the CLI from here:
 
-- [Linux, amd64](https://github.com/harivyasi/chemotion/releases/download/latest/chemotion)
-- [Windows, amd64](https://github.com/harivyasi/chemotion/releases/download/latest/chemotion.exe); remember to turn on [Docker integration with WSL](https://docs.docker.com/desktop/windows/wsl/).
-- [macOS, apple-silicon](https://github.com/harivyasi/chemotion/releases/download/latest/chemotion.arm.osx)
-- [macOS, amd64](https://github.com/harivyasi/chemotion/releases/download/latest/chemotion.amd.osx)
+- [Linux, amd64](https://github.com/harivyasi/chemotion/releases/download/0.1.2-alpha/chemotion)
+- [Windows, amd64](https://github.com/harivyasi/chemotion/releases/download/0.1.2-alpha/chemotion.exe); remember to turn on [Docker integration with WSL](https://docs.docker.com/desktop/windows/wsl/).
+- [macOS, apple-silicon](https://github.com/harivyasi/chemotion/releases/download/0.1.2-alpha/chemotion.arm.osx)
+- [macOS, amd64](https://github.com/harivyasi/chemotion/releases/download/0.1.2-alpha/chemotion.amd.osx)
 
 ### Make it an executable
 
