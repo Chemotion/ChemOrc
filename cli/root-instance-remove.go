@@ -1,66 +1,45 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
-var (
-	_root_instance_remove_name_  string
-	_root_instance_remove_force_ bool
-)
-
-func instanceRemove(givenName string) (success bool) {
+func instanceRemove(givenName string, force bool) (err error) {
 	name := getInternalName(givenName)
-	if !_root_instance_remove_force_ {
-		if instanceStatus(givenName) == "Up" {
-			zboth.Fatal().Err(fmt.Errorf("illegal operation")).Msgf("Cannot delete an instance that is currently running. Please use `chemotion -i %s stop` to stop the instance.", givenName)
-		}
-		if givenName == currentState.name {
-			zboth.Fatal().Err(fmt.Errorf("illegal operation")).Msgf("Cannot delete the currently selected instance. Use `chemotion switch` to switch selection to another instance before proceeding.")
-		}
-		if len(allInstances()) == 1 {
-			zboth.Fatal().Err(fmt.Errorf("illegal operation")).Msgf("Cannot delete the only instance. Use `chemotion advanced uninstall` remove %s entirely", nameCLI)
+	// stop and delete instance
+	if force {
+		if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+"kill"), gotoFolder("workdir"); success {
+			zboth.Debug().Msgf("Successfully killed container of instance called %s.", givenName)
+		} else {
+			err = toError("failed to kill the containers associated with instance %s", givenName)
+			return
 		}
 	}
-	if _root_instance_remove_force_ && !(instanceStatus(givenName) == "Exited" || instanceStatus(givenName) == "Created") {
-		if _, worked, _ := gotoFolder(givenName), callVirtualizer("compose kill"), gotoFolder("workdir"); worked {
-			success = worked
+	if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+"down --remove-orphans --volumes"), gotoFolder("workdir"); success {
+		zboth.Debug().Msgf("Successfully removed container of instance called %s.", givenName)
+	} else {
+		err = toError("failed to remove the containers associated with instance %s", givenName)
+		return
+	}
+	// delete folders: shared folder and then named instance folder
+	if deleteShared := modifyContainer(givenName, "rm -rf", "shared", ""); deleteShared {
+		zboth.Debug().Msgf("Successfully removed `shared` folder associated with %s.", givenName)
+		if deleteFolder := workDir.Join(instancesWord, name).RemoveAll(); deleteFolder == nil {
+			zboth.Debug().Msgf("Successfully removed named instance folder associated with %s.", givenName)
 		} else {
-			success = worked
-			zboth.Warn().Msgf("Failed to kill the containers associated with instance %s", givenName)
+			err = toError("failed to delete associated folder `%s` in `%s`", name, instancesWord)
+			return
 		}
 	} else {
-		success = true
-	}
-	if success {
-		_, success, _ = gotoFolder(givenName), callVirtualizer("compose down --remove-orphans --volumes"), gotoFolder("workdir")
-	}
-	// delete folder
-	if success {
-		zboth.Info().Msgf("Successfully removed container of instance called %s.", givenName)
-		zboth.Info().Msgf("Removing `shared` folder associated with %s.", givenName)
-		success = modifyContainer(givenName, []string{"rm -rf", "shared"})
-	}
-	if success {
-		if err := workDir.Join(instancesFolder, name).RemoveAll(); err != nil {
-			zboth.Warn().Err(err).Msgf("Failed to delete associated folder `%s` in `%s`.", name, instancesFolder)
-		}
+		err = toError("failed to remove the `shared` associated with instance %s; you may require admin priviledges to remove it", givenName)
+		return
 	}
 	// delete entry in config
-	if success {
-		configMap := conf.GetStringMap("instances")
-		delete(configMap, givenName)
-		conf.Set("instances", configMap)
-		if err := conf.WriteConfig(); err == nil {
-			zboth.Info().Msgf("Modified configuration file `%s` to remove entry for `%s`.", conf.ConfigFileUsed(), givenName)
-		} else {
-			zboth.Fatal().Err(err).Msgf("Failed to update the configuration file.")
-		}
-	}
-	if !success {
-		zboth.Info().Msgf("Clean deletion of %s failed. Check log to see what went wrong.", givenName)
+	configMap := conf.GetStringMap(instancesWord)
+	delete(configMap, givenName)
+	conf.Set(instancesWord, configMap)
+	if err = rewriteConfig(); err != nil {
+		err = toError("fail to rewrite configuration file")
 	}
 	return
 }
@@ -69,19 +48,58 @@ var removeInstanceRootCmd = &cobra.Command{
 	Use:   "remove",
 	Args:  cobra.NoArgs,
 	Short: "Remove an existing instance of " + nameCLI,
-	Run: func(cmd *cobra.Command, args []string) {
-		logWhere()
-		confirmInstalled()
-		if _root_instance_remove_name_ == "" {
-			confirmInteractive()
-			_root_instance_remove_name_ = selectInstance("remove")
+	Run: func(cmd *cobra.Command, _ []string) {
+		if len(allInstances()) == 1 {
+			zboth.Fatal().Err(toError("only one instance")).Msgf("Cannot delete the only instance. Use `%s %s %s` remove %s entirely", commandForCLI, advancedRootCmd.Use, uninstallAdvancedRootCmd.Use, commandForCLI)
 		}
-		instanceRemove(_root_instance_remove_name_)
+		var (
+			givenName string
+			force     bool
+		)
+		if ownCall(cmd) {
+			if cmd.Flag("name").Changed {
+				givenName = cmd.Flag("name").Value.String()
+				if err := instanceValidate(givenName); err != nil {
+					zboth.Fatal().Err(err).Msgf(err.Error())
+				}
+			} else {
+				isInteractive(true)
+				givenName = selectInstance("remove")
+			}
+		} else {
+			if isInteractive(false) {
+				givenName = selectInstance("remove")
+			} else {
+				zboth.Fatal().Err(toError("unexpected operation")).Msgf("Please repeat your actions with the `--debug` flag and report this error.")
+			}
+		}
+		if givenName == currentInstance {
+			zboth.Fatal().Err(toError("illegal operation")).Msgf("Cannot delete the currently selected instance. Use `%s instance %s` to switch selection to another instance before proceeding.", commandForCLI, switchInstanceRootCmd.Use)
+		}
+		status := instanceStatus(givenName)
+		if elementInSlice(status, &[]string{"Exited", "Created"}) == -1 {
+			zboth.Warn().Msgf("The instance %s is %s.", givenName, status)
+			if ownCall(cmd) {
+				force = toBool(cmd.Flag("force").Value.String())
+				if !force && isInteractive(true) {
+					force = selectYesNo("Force remove", false)
+				}
+			} else {
+				if isInteractive(false) {
+					force = selectYesNo("Force remove", false)
+				} else {
+					zboth.Fatal().Err(toError("unexpected operation")).Msgf("Please repeat your actions with the `--debug` flag and report this error.")
+				}
+			}
+		}
+		if err := instanceRemove(givenName, force); err != nil {
+			zboth.Warn().Err(err).Msgf(err.Error())
+		}
 	},
 }
 
 func init() {
 	instanceRootCmd.AddCommand(removeInstanceRootCmd)
-	removeInstanceRootCmd.Flags().StringVar(&_root_instance_remove_name_, "name", "", "name of the instance to remove")
-	removeInstanceRootCmd.Flags().BoolVar(&_root_instance_remove_force_, "force", false, "force remove an instance (very risky)")
+	removeInstanceRootCmd.Flags().StringP("name", "n", "", "name of the instance to remove")
+	removeInstanceRootCmd.Flags().Bool("force", false, "force remove an instance (very risky)")
 }

@@ -1,32 +1,18 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
-var (
-	_root_instance_backup_database_ bool
-	_root_instance_backup_data_     bool
-)
-
-func instanceBackup(givenName string) {
+func instanceBackup(givenName, portion string) {
 	// deliver payload
 	//TODO: include version check before delivering payload
 	gotoFolder(givenName)
-	var err, msg, portion string
-	portion = "both"
-	if _root_instance_backup_database_ && !_root_instance_backup_data_ {
-		portion = "db"
-	}
-	if _root_instance_backup_data_ && !_root_instance_backup_database_ {
-		portion = "data"
-	}
+	var err, msg string
 	status := instanceStatus(givenName)
-	if successStart := callVirtualizer("compose start eln"); successStart {
-		if successCurl := callVirtualizer("compose exec eln curl https://raw.githubusercontent.com/harivyasi/chemotion/chemotion-cli/chemotion-cli/payload/backup.sh --output /embed/scripts/backup.sh"); successCurl {
-			if successBackUp := callVirtualizer("compose exec --env BACKUP_WHAT=" + portion + " eln chemotion backup"); successBackUp {
+	if successStart := callVirtualizer(composeCall + "start eln"); successStart {
+		if successCurl := callVirtualizer(composeCall + "exec eln curl https://raw.githubusercontent.com/harivyasi/chemotion/chemotion-cli/chemotion-cli/payload/backup.sh --output /embed/scripts/backup.sh"); successCurl {
+			if successBackUp := callVirtualizer(composeCall + "exec --env BACKUP_WHAT=" + portion + " eln chemotion backup"); successBackUp {
 				zboth.Info().Msgf("Backup successful.")
 			} else {
 				msg = "Backup process failed."
@@ -37,7 +23,7 @@ func instanceBackup(givenName string) {
 			msg = "Could not fix the broken `backup.sh`. Can't create backup."
 		}
 		if status != "Up" { // if instance was not Up prior to start then stop it now
-			callVirtualizer("compose stop")
+			callVirtualizer(composeCall + "stop") // need to be low-level because only one service is running
 		}
 	} else {
 		err = "starting eln service failed"
@@ -45,7 +31,7 @@ func instanceBackup(givenName string) {
 	}
 	gotoFolder("workdir")
 	if err != "" {
-		zboth.Fatal().Err(fmt.Errorf(err)).Msgf(msg)
+		zboth.Fatal().Err(toError(err)).Msgf(msg)
 	}
 }
 
@@ -53,29 +39,50 @@ var backupInstanceRootCmd = &cobra.Command{
 	Use:   "backup",
 	Short: "Create a backup of the data associated to an instance of " + nameCLI,
 	Args:  cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		logWhere()
-		confirmInstalled()
-		backup := true
-		if !currentState.quiet {
-			status := instanceStatus(currentState.name)
-			if status == "Up" {
-				backup = selectYesNo(fmt.Sprintf("The instance called %s is running. Backing up a running instance is not a good idea. Continue", currentState.name), false)
+	Run: func(cmd *cobra.Command, _ []string) {
+		backup, status := true, instanceStatus(currentInstance)
+		if status == "Up" {
+			zboth.Warn().Err(toError("instance running")).Msgf("The instance called %s is running. Backing up a running instance is not a good idea.", currentInstance)
+			if isInteractive(false) {
+				backup = selectYesNo("Continue", false)
 			}
-			if status == "Created" {
-				backup = selectYesNo(fmt.Sprintf("The instance called %s was created but never turned on. Backing up such an instance is not a good idea. Continue", currentState.name), false)
+		}
+		if status == "Created" {
+			zboth.Warn().Err(toError("instance never run")).Msgf("The instance called %s was created but never turned on. Backing up such an instance is not a good idea.", currentInstance)
+			if isInteractive(false) {
+				backup = selectYesNo("Continue", false)
 			}
 		}
 		if backup {
-			instanceBackup(currentState.name)
+			portion := "both"
+			if ownCall(cmd) {
+				if toBool(cmd.Flag("db").Value.String()) && !toBool(cmd.Flag("data").Value.String()) {
+					portion = "db"
+				}
+				if toBool(cmd.Flag("data").Value.String()) && !toBool(cmd.Flag("db").Value.String()) {
+					portion = "data"
+				}
+			} else {
+				if isInteractive(false) {
+					switch selectOpt([]string{"database and data", "database", "data", "exit"}, "What would you like to backup?") {
+					case "database and data":
+						portion = "both"
+					case "database":
+						portion = "db"
+					case "data":
+						portion = "data"
+					}
+				}
+			}
+			instanceBackup(currentInstance, portion)
 		} else {
-			zlog.Debug().Msgf("Backup operation cancelled.")
+			zboth.Debug().Msgf("Backup operation cancelled.")
 		}
 	},
 }
 
 func init() {
-	backupInstanceRootCmd.Flags().BoolVar(&_root_instance_backup_database_, "db", false, "backup only database")
-	backupInstanceRootCmd.Flags().BoolVar(&_root_instance_backup_data_, "data", false, "backup only data")
+	backupInstanceRootCmd.Flags().Bool("db", false, "backup only database")
+	backupInstanceRootCmd.Flags().Bool("data", false, "backup only data")
 	instanceRootCmd.AddCommand(backupInstanceRootCmd)
 }

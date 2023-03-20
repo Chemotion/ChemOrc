@@ -1,57 +1,58 @@
 package cli
 
 import (
-	"fmt"
-	"os"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 )
 
-var (
-	_root_instance_stat_all_     bool
-	_root_instance_stat_service_ string
-)
-
-func instanceStat(givenName, service string) {
-	name, services, out, statOf := getInternalName(givenName), getServices(givenName), []string{""}, []string{}
-	if _root_instance_stat_all_ {
-		statOf = services
-		zboth.Info().Msgf("Printing stats for the instance called %s.", givenName)
-	} else {
-		if elementInSlice(service, &services) > -1 {
-			statOf = []string{service}
-			zboth.Info().Msgf("Printing stats for the instance-service called %s-%s.", givenName, service)
-		} else {
-			zboth.Fatal().Err(fmt.Errorf("named service not found")).Msgf("No service called %s found associated with the instance called %s.", service, givenName)
+func instanceStatus(givenName string) (status string) {
+	out := getColumn(givenName, "Status", "")
+	var statuses []string
+	for _, line := range out { // determine what are the status messages for all associated containers
+		l := strings.Split(line, " ") // use only the first word
+		if len(l) > 0 {
+			status := l[0]                 // use only the first word
+			if l[len(l)-1] == "(Paused)" { // use this if the last word is Paused
+				status = "Paused"
+			}
+			if elementInSlice(status, &statuses) == -1 && len(status) != 0 {
+				statuses = append(statuses, status)
+			}
 		}
 	}
-	zboth.Info().Msgf("The status of %s is: %s.", givenName, instanceStatus(givenName))
-	if res, err := execShell(fmt.Sprintf("%s stats --all --no-stream --no-trunc --format \"{{ .Name }} {{ .MemUsage }} {{ .MemPerc }} {{ .CPUPerc }}\"", toLower(virtualizer))); err == nil {
+	if len(statuses) == 0 {
+		status = "Instance not found"
+	} else if len(statuses) == 1 {
+		status = statuses[0]
+	} else if len(statuses) > 1 {
+		status = strings.Join(statuses, " and ")
+	}
+	return
+}
+
+func instanceStat(givenName string) {
+	name, services, out := getInternalName(givenName), getServices(givenName), []string{""}
+	zboth.Info().Msgf("The status of %s is: %s.\n\nIts stats are:", givenName, instanceStatus(givenName))
+	if res, err := execShell(toSprintf("%s stats --all --no-stream --no-trunc --format \"{{ .Name }} {{ .ID }} {{ .MemUsage }} {{ .MemPerc }} {{ .CPUPerc }}\"", toLower(virtualizer))); err == nil {
 		out[0] = string(res)
 		out = strings.Split(out[0], "\n")
-		w := new(tabwriter.Writer)
-		w.Init(os.Stdout, 12, 8, 0, '\t', 0)
-		fmt.Fprintf(w, "\n %s\t%s\t%s\t%s", "Name", " Memory ", "Mem %", "CPU %")
-		fmt.Fprintf(w, "\n %s\t%s\t%s\t%s", "----", "--------", "-----", "-----")
-		for _, service := range statOf {
+		zboth.Info().Msgf("%10s %10s %10s %10s %10s", "Name", "ID", " Memory", "Mem %", "CPU %")
+		zboth.Info().Msgf("---------- ---------- ---------- ---------- ----------")
+		for _, service := range services {
 			found := false
 			for _, line := range out {
-				zlog.Log().Msgf("stats for %s-%s: %s", name, service, line)
 				l := strings.Split(line, " ")
-				if l[0] == fmt.Sprintf("%s-%s-%d", name, service, rollNum) {
-					fmt.Fprintf(w, "\n %s\t%s\t%s\t%s", service, l[1], l[4], l[5])
+				if l[0] == toSprintf("%s-%s-%d", name, service, rollNum) {
+					zboth.Info().Msgf("%10s %10s %10s %10s %10s", service, l[1][:10], l[2], l[5], l[6])
 					found = true
 					break
 				}
 			}
 			if !found {
-				zboth.Warn().Err(fmt.Errorf("stats not found")).Msgf("Error while parsing stats for the instance-container called %s-%s-%d.", name, service, rollNum)
+				zboth.Warn().Err(toError("stats not found")).Msgf("Error while parsing stats for the instance-container called %s-%s-%d.", name, service, rollNum)
 			}
 		}
-		fmt.Fprintf(w, "\n")
-		w.Flush()
 	} else {
 		zboth.Fatal().Err(err).Msgf("Failed to get stats from %s.", virtualizer)
 	}
@@ -59,27 +60,28 @@ func instanceStat(givenName, service string) {
 
 var statInstanceRootCmd = &cobra.Command{
 	Use:     "stat",
-	Aliases: []string{"stats"},
+	Aliases: []string{"stats", "status"},
 	Args:    cobra.NoArgs,
-	Short:   "Get stats of an instance of " + nameCLI,
-	Run: func(cmd *cobra.Command, args []string) {
-		logWhere()
-		confirmInstalled()
-		if currentState.quiet {
-			zboth.Warn().Err(fmt.Errorf("illegal operation")).Msgf("Stats can't be printed in quiet mode.")
-		} else {
-			if _root_instance_stat_service_ == "" {
-				zboth.Debug().Msgf("No service specified, printing stats for all services.")
-				_root_instance_stat_all_ = true
+	Short:   "Get status and status of an instance of " + nameCLI,
+	Run: func(cmd *cobra.Command, _ []string) {
+		if ownCall(cmd) && toBool(cmd.Flag("all").Value.String()) {
+			existingInstances := allInstances()
+			if len(existingInstances) == 1 {
+				zboth.Info().Msgf("You have only one instance of %s. Ignoring the `--all` flag.", nameCLI)
+				instanceStat(currentInstance)
+			} else {
+				for _, instance := range existingInstances {
+					status := instanceStatus(instance)
+					zboth.Info().Msgf("The status of %s is: %s.", instance, status)
+				}
 			}
-			_root_instance_stat_service_ = toLower(_root_instance_stat_service_)
-			instanceStat(currentState.name, _root_instance_stat_service_)
+		} else {
+			instanceStat(currentInstance)
 		}
 	},
 }
 
 func init() {
 	instanceRootCmd.AddCommand(statInstanceRootCmd)
-	statInstanceRootCmd.Flags().StringVar(&_root_instance_stat_service_, "service", "", "show the stats of a given service")
-	statInstanceRootCmd.Flags().BoolVar(&_root_instance_stat_all_, "all", false, "show the stats for all services of an instance")
+	statInstanceRootCmd.Flags().Bool("all", false, "show the status of all instances")
 }

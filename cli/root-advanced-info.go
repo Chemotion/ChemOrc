@@ -3,49 +3,55 @@ package cli
 import (
 	"fmt"
 	"runtime"
-	"strings"
 
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 )
 
-// helper function that is used by infoAdvancedRootCmd
-func systemInfo() (info string) {
+// get system information
+func getSystemInfo() (info string) {
 	// CPU
-	info += fmt.Sprintln("- CPU Cores:", runtime.NumCPU())
-	if runtime.GOOS == "linux" {
-		info += getDiskSpace() // Disk Space
-		info += getMemory()    // Memory
-	}
-	info += fmt.Sprintln("Used software versions:")
-	printVersionOf := []string{"docker", "ruby", "passenger", "node", "npm"}
-	for _, software := range printVersionOf {
-		info += fmt.Sprintf("- %s: %s\n", strings.ToTitle(software), findVersion(software))
-	}
+	info += toSprintf("\n- CPU Cores: %d", runtime.NumCPU())
+	info += getDiskSpace() // Disk Space
+	info += getMemory()    // Memory
+	// info += fmt.Sprintln("Used software versions:") // TODO: fix this
+	// printVersionOf := []string{"docker", "ruby", "passenger", "node", "npm"}
+	// for _, software := range printVersionOf {
+	// 	info += toSprintf("- %s: %s\n", strings.ToTitle(software), findVersion(software))
+	// }
 	return
 }
 
-// Show host machine information to the user
-// See also, chemotion instance info
+// print system info depending on the debug tag
+func systemInfo() {
+	info := getSystemInfo()
+	if isInteractive(false) {
+		if conf.GetBool(joinKey(stateWord, "debug")) {
+			zboth.Info().Msgf("Also writing all information in the log file.")
+			zboth.Debug().Msgf(info)
+		}
+		fmt.Println("This is what we know about the host machine:")
+		fmt.Println(info)
+	} else {
+		if err := workDir.Join("system.info").WriteFile([]byte(info + "\n")); err == nil {
+			zboth.Info().Msgf("Written system.info containing system information.")
+		} else {
+			zboth.Warn().Err(err).Msgf("Failed to write system.info. Writing all information in the log file.")
+			zerolog.SetGlobalLevel(zerolog.DebugLevel)
+			zboth.Debug().Msgf(info)
+			if !conf.GetBool(joinKey(stateWord, "debug")) {
+				zerolog.SetGlobalLevel(zerolog.InfoLevel)
+			}
+		}
+	}
+}
+
 var infoAdvancedRootCmd = &cobra.Command{
 	Use:   "info",
 	Args:  cobra.NoArgs,
 	Short: "get information about the system",
-	Run: func(cmd *cobra.Command, args []string) {
-		logWhere()
-		confirmInstalled()
-		info := systemInfo()
-		if currentState.quiet {
-			if err := workDir.Join("system.info").WriteFile([]byte(info)); err != nil {
-				zboth.Debug().Msgf(info)
-			}
-		} else {
-			if currentState.debug {
-				zboth.Debug().Msgf(info)
-			} else {
-				fmt.Println("This is what we know about the host machine:")
-				fmt.Println(info)
-			}
-		}
+	Run: func(_ *cobra.Command, _ []string) {
+		systemInfo()
 	},
 }
 
