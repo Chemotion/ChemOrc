@@ -15,6 +15,8 @@ The Chemotion CLI tool is a binary file and needs no installation. The only prer
 - macOS, apple-silicon
 - macOS, amd64
 
+Please be sure that you have both, `docker` and `docker compose` commands. This should be the case if you install Docker Desktop following the instructions [here](https://docs.docker.com/desktop/#download-and-install). If you choose to install only Docker Engine, then please make sure that you _also_ have `docker compose` as a command (as opposed to `docker-compose`).
+
 ### Make it an executable
 
 On Linux, make this file executable by doing: `chmod u+x chemotion`.
@@ -68,7 +70,7 @@ As long as you installed an instance of Chemotion using this tool, the upgrade p
 
 - First make sure that you have the latest version of this tool. You can check the version of your chemotion binary by doing `chemotion --version`. If necessary, follow the instructions in the [download](#download) section again. Feel free to replace the existing `chemotion` file. DO NOT remove/replace the `chemotion-cli.yml` file.
 - Prepare for update by running `chemotion advanced pull-image`. This will download the latest chemotion image from the internet if not already present on the system. Downloading the image outside of downtime saves you time later on.
-- Schedule a downtime of at least 15 minutes. During the downtime, run `chemotion instance update --name <instance_name>`.
+- Schedule a downtime of at least 15 minutes; more if you have a lot of data that needs to backed up. During the downtime, run `chemotion instance backup` to backup your data followed by `chemotion instance upgrade` to update the instance.
 
 ### Uninstallation
 
@@ -111,10 +113,10 @@ Following features are exist:
 - ✔ Installation & Deployment: `chemotion install` installs a production instance that is ready to use.
 - ✔ Instance life cycle commands: `chemotion on|off` and `chemotion instance status|stats|list|restart`.
 - ✔ Multiple instances: `chemotion instance add|switch|remove` can be used to manage multiple instances.
-- ✔ Upgrade: use `chemotion instance upgrade` to upgrade an existing Chemotion instance
+- ✔ Upgrade: use `chemotion instance upgrade` to upgrade an existing Chemotion instance.
+- ✔ Backups: use `chemotion instance backup` to save the data associated with an instance.
 
 Following features are planned:
 
-- Backups: `chemotion snapshot create|restore` to savely store your data somewhere
 - Manage Settings: `chemotion instance settings --import|--export` to import/export settings and to run auto-configuring wizards.
 - Frequently asked for features for the Chemotion Administrator: `chemotion user show|add|delete|password-reset`, `chemotion system info|rails-shell|shell`

@@ -204,7 +204,7 @@ func instanceCreate(givenName string, use string, kind string, givenAddress stri
 		zboth.Warn().Err(err).Msgf("Failed to write .env file")
 	}
 	envFile.Remove()
-	zboth.Info().Msgf("Successfully created container the container. New %s port available at %d.", nameCLI, port)
+	zboth.Info().Msgf("Successfully created the container called . New %s port available at %d.", nameCLI, port)
 	// now modify the config file
 	if err := conf.WriteConfig(); err == nil {
 		zboth.Info().Msgf("Written config file: %s.", conf.ConfigFileUsed())

@@ -5,9 +5,10 @@ import (
 )
 
 var instanceRootCmd = &cobra.Command{
-	Use:   "instance {status|switch|restart|new|remove}",
-	Args:  cobra.NoArgs,
-	Short: "Manipulate instances of " + nameCLI,
+	Use:     "instance {status|switch|restart|new|remove}",
+	Aliases: []string{"i"},
+	Args:    cobra.NoArgs,
+	Short:   "Manipulate instances of " + nameCLI,
 	Run: func(cmd *cobra.Command, args []string) {
 		logWhere()
 		confirmInstalled()

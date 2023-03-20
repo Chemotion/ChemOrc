@@ -6,14 +6,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	_root_instance_backup_database_ bool
+	_root_instance_backup_data_     bool
+)
+
 func instanceBackup(givenName string) {
 	// deliver payload
 	//TODO: include version check before delivering payload
 	gotoFolder(givenName)
-	var err, msg string
+	var err, msg, portion string
+	portion = "both"
+	if _root_instance_backup_database_ && !_root_instance_backup_data_ {
+		portion = "db"
+	}
+	if _root_instance_backup_data_ && !_root_instance_backup_database_ {
+		portion = "data"
+	}
+	status := instanceStatus(givenName)
 	if successStart := callVirtualizer("compose start eln"); successStart {
 		if successCurl := callVirtualizer("compose exec eln curl https://raw.githubusercontent.com/harivyasi/chemotion/chemotion-cli/chemotion-cli/payload/backup.sh --output /embed/scripts/backup.sh"); successCurl {
-			if successBackUp := callVirtualizer("compose exec eln chemotion backup"); successBackUp {
+			if successBackUp := callVirtualizer("compose exec --env BACKUP_WHAT=" + portion + " eln chemotion backup"); successBackUp {
 				zboth.Info().Msgf("Backup successful.")
 			} else {
 				msg = "Backup process failed."
@@ -23,7 +36,9 @@ func instanceBackup(givenName string) {
 			err = "backup.sh update failed"
 			msg = "Could not fix the broken `backup.sh`. Can't create backup."
 		}
-		callVirtualizer("compose stop eln")
+		if status != "Up" { // if instance was not Up prior to start then stop it now
+			callVirtualizer("compose stop")
+		}
 	} else {
 		err = "starting eln service failed"
 		msg = "Could not backup unless it starts. Can't create backup."
@@ -60,5 +75,7 @@ var backupInstanceRootCmd = &cobra.Command{
 }
 
 func init() {
+	backupInstanceRootCmd.Flags().BoolVar(&_root_instance_backup_database_, "db", false, "backup only database")
+	backupInstanceRootCmd.Flags().BoolVar(&_root_instance_backup_data_, "data", false, "backup only data")
 	instanceRootCmd.AddCommand(backupInstanceRootCmd)
 }
