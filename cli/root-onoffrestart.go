@@ -56,7 +56,7 @@ func instanceStart(givenName string) {
 			if status == "Exited" {
 				waitFor = 30
 			}
-			zlog.Info().Msgf("Starting instance called %s.", givenName) // because user sees the spinner
+			zboth.Info().Msgf("Starting instance called %s.", givenName) // because user sees the spinner
 			waitTime := waitStartSpinner(waitFor, givenName)
 			if waitTime >= 0 {
 				zboth.Info().Msgf("Successfully started instance called %s in %d seconds at %s.", givenName, waitTime, conf.GetString(joinKey(instancesWord, givenName, "accessAddress")))

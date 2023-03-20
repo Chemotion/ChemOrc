@@ -136,15 +136,15 @@ func getServices(givenName string) (services []string) {
 }
 
 // get container ID associated with a given `instance` and `service` of Chemotion
-func getContainerID(givenName, service string) (id string) {
-	out := getColumn(givenName, "ID", service)
-	if len(out) == 2 {
-		id = out[0]
-	} else {
-		id = "not found"
-	}
-	return
-}
+// func getContainerID(givenName, service string) (id string) {
+// 	out := getColumn(givenName, "ID", service)
+// 	if len(out) == 2 {
+// 		id = out[0]
+// 	} else {
+// 		id = "not found"
+// 	}
+// 	return
+// }
 
 // split address into subcomponents
 func splitAddress(full string) (protocol string, address string, port uint64) {

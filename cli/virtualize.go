@@ -36,7 +36,7 @@ func confirmVirtualizer(minimum string) {
 				zboth.Fatal().Err(err).Msgf("%s is out of date. Please update it before proceeding.", virtualizer)
 			}
 		} else {
-			zboth.Fatal().Err(toError("failed to convert version string")).Msgf("Failed to understand the following output upon executing `%s --version`: ", ver, toLower(virtualizer))
+			zboth.Fatal().Err(toError("failed to convert version string")).Msgf("Failed to understand the following output upon executing `%s --version`: %s", toLower(virtualizer), ver)
 		}
 	} else {
 		if err.Error() == "exit status 1" && runtime.GOOS == "linux" {

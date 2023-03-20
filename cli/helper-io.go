@@ -13,18 +13,18 @@ import (
 func logwhere() {
 	if isInContainer {
 		if currentInstance == "" {
-			zlog.Debug().Msgf("Running inside an unknown container") // TODO: read .version file or get from environment
+			zboth.Debug().Msgf("Running inside an unknown container") // TODO: read .version file or get from environment
 		} else {
-			zlog.Debug().Msgf("Running inside `%s`", currentInstance)
+			zboth.Debug().Msgf("Running inside `%s`", currentInstance)
 		}
 	} else {
 		if currentInstance == "" {
-			zlog.Debug().Msgf("Running on host machine; no instance selected yet")
+			zboth.Debug().Msgf("Running on host machine; no instance selected yet")
 		} else {
-			zlog.Debug().Msgf("Running on host machine; selected instance: %s", currentInstance)
+			zboth.Debug().Msgf("Running on host machine; selected instance: %s", currentInstance)
 		}
 	}
-	zlog.Debug().Msgf("Called as: %s", strings.Join(os.Args, " "))
+	zboth.Debug().Msgf("Called as: %s", strings.Join(os.Args, " "))
 }
 
 // to rewrite the configuration file

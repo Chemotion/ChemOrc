@@ -113,6 +113,9 @@ func newInstanceValidate(input string) (err error) {
 	if strings.ContainsRune(input, '.') {
 		err = toError("cannot have `.` in an instance name")
 	}
+	if toLower(input) != input {
+		err = toError("cannot have an uppercase letter") // because case is not preserved by Viper v1.x
+	}
 	if elementInSlice(input, &reseveredWords) > -1 {
 		err = toError("this is a reserved word; pick another")
 	}

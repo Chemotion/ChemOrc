@@ -140,6 +140,7 @@ func processInstallAndInstanceCreateCmd(cmd *cobra.Command, details map[string]s
 func createExtendedCompose(name, use string) (extendedCompose viper.Viper) {
 	extendedCompose = *viper.New()
 	compose := parseCompose(use)
+	extendedCompose.Set("name", name) // set project name for the virtulizer
 	sections := []string{"services", "volumes", "networks"}
 	// set labels on services, volumes and networks for future identification
 	for _, section := range sections {

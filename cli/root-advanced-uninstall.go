@@ -26,8 +26,8 @@ func advancedUninstall(removeLogfile bool) {
 	}
 	zboth.Info().Msgf("%s was successfully uninstalled.", nameCLI)
 	if removeLogfile {
-		if err := workDir.Join(logFilename).Remove(); err != nil {
-			zboth.Warn().Err(err).Msgf("Failed to delete the log file: %s.", logFilename)
+		if err := workDir.Join(defaultLogFilename).Remove(); err != nil {
+			zboth.Warn().Err(err).Msgf("Failed to delete the log file: %s.", defaultLogFilename)
 		}
 	}
 }

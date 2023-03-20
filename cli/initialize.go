@@ -2,6 +2,7 @@ package cli
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	"github.com/chigopher/pathlib"
@@ -15,13 +16,25 @@ func initLog() {
 	// alas, it works only with command line flags, otherwise
 	// we have to wait for the values to be read in from the config file
 	// this low-level reading has to be done because logging begins before reading the config file.
-	if zerolog.SetGlobalLevel(zerolog.InfoLevel); elementInSlice("--debug", &os.Args) > 0 || elementInSlice("-d", &os.Args) > 0 || elementInSlice("-qd", &os.Args) > 0 || elementInSlice("-dq", &os.Args) > 0 {
+	debug := elementInSlice("--debug", &os.Args) > 0
+	quiet := elementInSlice("--quiet", &os.Args) > 0
+	for _, arg := range os.Args[1:] {
+		if len(arg) > 1 && arg[0] == '-' && arg[0:2] != "--" {
+			if strings.ContainsRune(arg, 'q') {
+				quiet = true
+			}
+			if strings.ContainsRune(arg, 'd') {
+				debug = true
+			}
+		}
+	}
+	if zerolog.SetGlobalLevel(zerolog.InfoLevel); debug {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 	// start logging
-	if logFile, err := workDir.Join(logFilename).OpenFile(os.O_APPEND | os.O_CREATE | os.O_WRONLY); err == nil {
+	if logFile, err := workDir.Join(defaultLogFilename).OpenFile(os.O_APPEND | os.O_CREATE | os.O_WRONLY); err == nil {
 		zlog = zerolog.New(logFile).With().Timestamp().Logger()
-		if elementInSlice("-q", &os.Args) > 0 || elementInSlice("--quiet", &os.Args) > 0 || elementInSlice("-qd", &os.Args) > 0 || elementInSlice("-dq", &os.Args) > 0 {
+		if quiet {
 			zboth = zlog // in this case, both the loggers point to the same file and there should be no console output
 		} else {
 			console := zerolog.ConsoleWriter{Out: os.Stdout}
@@ -60,7 +73,7 @@ func upgradeThisTool(transition string) (success bool) {
 		if success = selectYesNo("It seems you are upgrading from version 0.1.x of the tool to 0.2.x. Is this true?", true); success {
 			newConfig := viper.New()
 			newConfig.Set("version", versionYAML)
-			newConfig.Set(joinKey(stateWord, selectorWord), conf.GetString(selectorWord))
+			newConfig.Set(joinKey(stateWord, selectorWord), conf.GetString("selected"))
 			newConfig.Set(joinKey(stateWord, "debug"), false)
 			newConfig.Set(joinKey(stateWord, "quiet"), false)
 			newConfig.Set(joinKey(stateWord, "version"), versionCLI)
@@ -102,7 +115,8 @@ func upgradeThisTool(transition string) (success bool) {
 					if errRenameNew := workDir.Join("new." + defaultConfigFilepath).RenameStr(conf.ConfigFileUsed()); errRenameNew == nil {
 						zboth.Info().Msgf("Successfully written new configuration file at %s.", conf.ConfigFileUsed())
 						oldConfigPath.Remove()
-						success = true
+						zboth.Info().Msgf("Upgrade was successful. Please restart this tool.")
+						os.Exit(0)
 					} else {
 						zboth.Fatal().Err(errRenameNew).Msgf("Failed to rename the new configuration file. It is available at: %s", configFile+".new")
 					}
@@ -136,27 +150,39 @@ func initConf() {
 		firstRun = false
 		// Try and read the configuration file, then unmarshal it
 		if err := conf.ReadInConfig(); err == nil {
-			if conf.IsSet(joinKey(stateWord, selectorWord)) && conf.IsSet(instancesWord) {
-				if currentInstance == "" { // i.e. the flag was not set
-					if errUnmarshal := conf.UnmarshalKey(joinKey(stateWord, selectorWord), &currentInstance); errUnmarshal != nil {
-						zboth.Fatal().Err(toError("unmarshal failed")).Msgf("Failed to unmarshal the mandatory key %s in the file: %s.", joinKey(stateWord, selectorWord), configFile)
-					}
-				}
-				if !conf.IsSet(joinKey(instancesWord, currentInstance)) {
-					zboth.Fatal().Err(toError("unmarshal failed")).Msgf("Failed to find the description for instance `%s` in the file: %s.", currentInstance, configFile)
-				}
-			} else {
-				if conf.IsSet(joinKey(selectorWord)) {
+			switch conf.GetString("version") { // version of the YAML file
+			case "1.0":
+				zboth.Info().Msgf("Your current version of %s CLI tool is not compatible with the existing configuration file.", nameCLI)
+				if selectYesNo("Would you like to upgrade?", false) {
 					if upgradeThisTool("0.1_to_0.2") {
-						zboth.Info().Msgf("Upgrade was successful. Please restart this tool.")
-						os.Exit(0)
+						// successful upgrade exits the tool
+					} else {
+						zboth.Fatal().Err(toError("upgrade failed")).Msgf("Upgrade failed! Please contact Chemotion support.")
 					}
+				} else {
+					zboth.Fatal().Err(toError("version", conf.GetString("version"), "of", conf.ConfigFileUsed(), "incompatible with CLI version", versionCLI)).Msgf("Please upgrade the CLI tool to continue. Or use CLI version 0.1.")
 				}
-				zboth.Fatal().Err(toError("unmarshal failed")).Msgf("Failed to find the mandatory keys `%s`, `%s` and `%s` in the file: %s.", stateWord, selectorWord, instancesWord, configFile)
+			case "1.1":
+				if conf.IsSet(joinKey(stateWord, selectorWord)) && conf.IsSet(instancesWord) {
+					if currentInstance == "" { // i.e. the flag was not set
+						if errUnmarshal := conf.UnmarshalKey(joinKey(stateWord, selectorWord), &currentInstance); errUnmarshal != nil {
+							zboth.Fatal().Err(toError("unmarshal failed")).Msgf("Failed to unmarshal the mandatory key %s in the file: %s.", joinKey(stateWord, selectorWord), configFile)
+						}
+					}
+					if !conf.IsSet(joinKey(instancesWord, currentInstance)) {
+						zboth.Fatal().Err(toError("unmarshal failed")).Msgf("Failed to find the description for instance `%s` in the file: %s.", currentInstance, configFile)
+					}
+				} else {
+					zboth.Fatal().Err(toError("unmarshal failed")).Msgf("Failed to find the mandatory keys `%s`, `%s` and `%s` in the file: %s.", stateWord, selectorWord, instancesWord, configFile)
+				}
+			default:
+				zboth.Fatal().Err(toError("config file version unsupported.")).Msgf("This version of the configuration file is unsupported. One likely fix is to update your CLI tool to the latest!")
 			}
 		} else {
 			zboth.Fatal().Err(err).Msgf("Failed to read configuration file: %s. ABORT!", configFile)
 		}
+	} else if !firstRun {
+		zboth.Fatal().Err(toError("config file not found")).Msgf("Failed to read the configuration file: %s. ABORT!", configFile)
 	}
 	zlog.Debug().Msgf("End: initialize configuration; Config found?: %t; is inside container?: %t", !firstRun, isInContainer)
 }
