@@ -27,13 +27,19 @@ func logwhere() {
 	zboth.Debug().Msgf("Called as: %s", strings.Join(os.Args, " "))
 }
 
-// to rewrite the configuration file
-func rewriteConfig() (err error) {
+// to write the configuration file
+func writeConfig(firstRun bool) (err error) {
 	var (
 		keysToPreserve = []string{joinKey(stateWord, "quiet"), joinKey(stateWord, "debug")}
 		preserve       = make(map[string]any)
 	)
-	if !firstRun { // backup values
+	if firstRun {
+		conf.Set("version", versionConfig)
+		conf.Set(joinKey(stateWord, selectorWord), currentInstance)
+		conf.Set(joinKey(stateWord, "quiet"), false)
+		conf.Set(joinKey(stateWord, "debug"), false)
+		conf.Set(joinKey(stateWord, "version"), versionCLI)
+	} else { // backup values
 		oldConf := parseCompose(conf.ConfigFileUsed())
 		for _, key := range keysToPreserve {
 			preserve[key] = conf.GetBool(key)   // backup key into memory

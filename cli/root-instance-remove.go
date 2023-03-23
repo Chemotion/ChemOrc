@@ -38,7 +38,7 @@ func instanceRemove(givenName string, force bool) (err error) {
 	configMap := conf.GetStringMap(instancesWord)
 	delete(configMap, givenName)
 	conf.Set(instancesWord, configMap)
-	if err = rewriteConfig(); err != nil {
+	if err = writeConfig(false); err != nil {
 		err = toError("fail to rewrite configuration file")
 	}
 	return
@@ -47,7 +47,7 @@ func instanceRemove(givenName string, force bool) (err error) {
 var removeInstanceRootCmd = &cobra.Command{
 	Use:   "remove",
 	Args:  cobra.NoArgs,
-	Short: "Remove an existing instance of " + nameCLI,
+	Short: "Remove an existing instance of " + nameProject,
 	Run: func(cmd *cobra.Command, _ []string) {
 		if len(allInstances()) == 1 {
 			zboth.Fatal().Err(toError("only one instance")).Msgf("Cannot delete the only instance. Use `%s %s %s` remove %s entirely", commandForCLI, advancedRootCmd.Use, uninstallAdvancedRootCmd.Use, commandForCLI)

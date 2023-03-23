@@ -14,16 +14,15 @@ var consoleInstanceRootCmd = &cobra.Command{
 	ValidArgs: maps.Keys(consoleInstanceCmdTable),
 	Run: func(cmd *cobra.Command, args []string) {
 		isInteractive(true)
-		acceptedOpts := []string{"shell", "ruby on rails", "postgresSQL", "reset user password"}
+		acceptedOpts := []string{"shell", "ruby on rails", "postgresSQL"}
 		consoleInstanceCmdTable["shell"] = shellConsoleInstanceRootCmd.Run
 		consoleInstanceCmdTable["ruby on rails"] = railsConsoleInstanceRootCmd.Run
 		consoleInstanceCmdTable["postgreSQL"] = psqlConsoleInstanceRootCmd.Run
-		consoleInstanceCmdTable["reset user password"] = resetPasswordConsoleInstanceRootCmd.Run
-		if cmd.Use == cmd.CalledAs() || elementInSlice(cmd.CalledAs(), &cmd.Aliases) > -1 {
+		if ownCall(cmd) {
 			acceptedOpts = append(acceptedOpts, "exit")
 		} else {
 			acceptedOpts = append(acceptedOpts, []string{"back", "exit"}...)
-			consoleInstanceCmdTable["back"] = cmd.Run
+			consoleInstanceCmdTable["back"] = cmd.Run // FIXME: takes to the root menu instead of the parent menu
 		}
 		consoleInstanceCmdTable[selectOpt(acceptedOpts, "")](cmd, args)
 	},

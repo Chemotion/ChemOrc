@@ -90,7 +90,7 @@ func instanceRestart(givenName string) {
 var restartRootCmd = &cobra.Command{
 	Use:   "restart [-i <instance_name>]",
 	Args:  cobra.NoArgs,
-	Short: "Restart the selected instance of " + nameCLI,
+	Short: "Restart the selected instance of " + nameProject,
 	Run: func(_ *cobra.Command, _ []string) {
 		instanceRestart(currentInstance)
 	},
@@ -100,7 +100,7 @@ var restartRootCmd = &cobra.Command{
 var onRootCmd = &cobra.Command{
 	Use:   "on [-i <instance_name>]",
 	Args:  cobra.NoArgs,
-	Short: "Start the selected instance of " + nameCLI,
+	Short: "Start the selected instance of " + nameProject,
 	Run: func(_ *cobra.Command, _ []string) {
 		instanceStart(currentInstance)
 	},
@@ -109,7 +109,7 @@ var onRootCmd = &cobra.Command{
 var offRootCmd = &cobra.Command{
 	Use:   "off [-i <instance_name>]",
 	Args:  cobra.NoArgs,
-	Short: "Stop the selected instance of " + nameCLI,
+	Short: "Stop the selected instance of " + nameProject,
 	Run: func(_ *cobra.Command, _ []string) {
 		instanceStop(currentInstance)
 	},

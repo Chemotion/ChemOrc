@@ -37,7 +37,7 @@ func instanceBackup(givenName, portion string) {
 
 var backupInstanceRootCmd = &cobra.Command{
 	Use:   "backup",
-	Short: "Create a backup of the data associated to an instance of " + nameCLI,
+	Short: "Create a backup of the data associated to an instance of " + nameProject,
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, _ []string) {
 		backup, status := true, instanceStatus(currentInstance)

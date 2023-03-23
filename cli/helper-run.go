@@ -13,14 +13,14 @@ import (
 // check if the CLI is running interactively; if no and fail, then exit. Wrapper around conf.GetBool(joinKey(stateWord,"quiet")).
 func isInteractive(fail bool) (interactive bool) {
 	interactive = true
+	if isInContainer {
+		if interactive = false; fail {
+			zboth.Fatal().Err(toError("inside container in interactive mode")).Msgf("%s is not meant to executed interactively from within a container. Please provide all commands and flags. ABORT!", nameCLI)
+		}
+	}
 	if conf.GetBool(joinKey(stateWord, "quiet")) {
 		if interactive = false; fail {
 			zboth.Fatal().Err(toError("incomplete in quiet mode")).Msgf("%s is in quiet mode. Give all arguments to specify the desired action; use '--help' flag for more. ABORT!", nameCLI)
-		}
-	}
-	if isInContainer {
-		if interactive = false; fail {
-			zboth.Fatal().Err(toError("inside container in interactive mode")).Msgf("%s CLI is not meant to executed interactively from within a container. Use the `-q` flag. ABORT!", nameCLI)
 		}
 	}
 	return
@@ -76,7 +76,8 @@ func toBool(s string) (value bool) {
 	return
 }
 
-// determine if the command was called on its own (true) or access via a menu (false)
+// determine if the command was called on its own (true) or accessed via a menu (false);
+// only works if the command has no children of its own
 func ownCall(cmd *cobra.Command) bool {
 	return len(cmd.Commands()) == 0 // a command is accessed on its own if there are no child commands
 }
@@ -113,7 +114,7 @@ func getColumn(givenName, column, service string) (values []string) {
 	if service != "" {
 		filterStr += toSprintf(" --filter name=%s", service)
 	}
-	if res, err := execShell(toSprintf("%s ps -a %s --format \"{{.%s}}\"", toLower(virtualizer), filterStr, column)); err == nil {
+	if res, err := execShell(toSprintf("%s ps -a %s --format \"{{.%s}}\"", virtualizer, filterStr, column)); err == nil {
 		values = strings.Split(string(res), "\n")
 	} else {
 		values = []string{}

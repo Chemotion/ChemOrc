@@ -1,14 +1,17 @@
 # Dev Notes
 
-# Tool Initialization: Flow of Control
+## Tool Initialization: Flow of Control
 
-1. func main() [main.go]
-2. func Execute() [root.go]
-3. init() [root.go]
-   1. initLog()
-   2. initFlags()
-4. cobra.OnInitialize
-   1. initConf()
-   2. bindFlags()
-5. rootCmd.SetVersionTemplate
-6. func rootCmd.Execute()
+1. `func main()` [main.go]
+2. `init()`
+   1. `initLog()`
+   2. `initFlags()`
+   3. `cobra.OnInitialize()`
+      1. `initConf()`
+      2. `bindFlags()`
+3. `rootCmd.SetVersionTemplate()`
+4. `func Execute()`
+5. `func rootCmd.Execute()`
+6. `logwhere()`
+7. `confirmVirtualizer()`
+8. `instanceValidate()`

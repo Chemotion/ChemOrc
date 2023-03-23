@@ -9,13 +9,15 @@ import (
 
 func advancedUninstall(removeLogfile bool) {
 	existingInstances := allInstances()
-	existingInstances[elementInSlice(currentInstance, &existingInstances)] = existingInstances[len(existingInstances)-1]
-	existingInstances[len(existingInstances)-1] = currentInstance // move currentInstance to the end of the queue for deletion
-	for _, inst := range existingInstances {
-		zboth.Info().Msgf("Removing instance called %s.", inst)
-		if err := instanceRemove(inst, true); err != nil {
-			zboth.Warn().Err(err).Msgf(err.Error())
-			zboth.Fatal().Err(toError("uninstalled failed")).Msgf("Uninstall failed while trying to remove %s", inst)
+	if len(existingInstances) > 0 {
+		existingInstances[elementInSlice(currentInstance, &existingInstances)] = existingInstances[len(existingInstances)-1]
+		existingInstances[len(existingInstances)-1] = currentInstance // move currentInstance to the end of the queue for deletion
+		for _, inst := range existingInstances {
+			zboth.Info().Msgf("Removing instance called %s.", inst)
+			if err := instanceRemove(inst, true); err != nil {
+				zboth.Warn().Err(err).Msgf(err.Error())
+				zboth.Fatal().Err(toError("uninstalled failed")).Msgf("Uninstall failed while trying to remove %s", inst)
+			}
 		}
 	}
 	if err := workDir.Join(instancesWord).RemoveAll(); err != nil {
@@ -26,8 +28,8 @@ func advancedUninstall(removeLogfile bool) {
 	}
 	zboth.Info().Msgf("%s was successfully uninstalled.", nameCLI)
 	if removeLogfile {
-		if err := workDir.Join(defaultLogFilename).Remove(); err != nil {
-			zboth.Warn().Err(err).Msgf("Failed to delete the log file: %s.", defaultLogFilename)
+		if err := workDir.Join(logFilename).Remove(); err != nil {
+			zboth.Warn().Err(err).Msgf("Failed to delete the log file: %s.", logFilename)
 		}
 	}
 }
@@ -40,7 +42,7 @@ var uninstallAdvancedRootCmd = &cobra.Command{
 		if isInteractive(false) {
 			zerolog.SetGlobalLevel(zerolog.DebugLevel) // uninstall operates in debug mode
 			zboth.Debug().Msgf("Uninstall operates in debug mode!")
-			if selectYesNo("Are you sure you want to uninstall "+nameCLI, false) {
+			if selectYesNo(toSprintf("Are you sure you want to uninstall %s completely; this also removes all instances of %s", nameCLI, nameProject), false) {
 				switch selectOpt([]string{"yes", "no", "exit"}, "Do you want to keep the log file after successful uninstallation") {
 				case "exit":
 					// ideally this case is handled in the selectOpt function, here as a safety precaution

@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -25,22 +24,22 @@ func instanceUpgrade(givenName, use string) {
 	var success bool = true
 	name := getInternalName(givenName)
 	// download the new compose (in the working directory)
-	newComposeFile := downloadFile(getLatestComposeURL(), workDir.String())
+	newComposeFile := downloadFile(composeURL, workDir.String())
 	// get port from old compose
-	oldComposeFile := workDir.Join(instancesWord, name, defaultComposeFilename)
+	oldComposeFile := workDir.Join(instancesWord, name, chemotionComposeFilename)
 	oldCompose := parseCompose(oldComposeFile.String())
 	if err := changeKey(newComposeFile.String(), joinKey("services", "eln", "ports[0]"), oldCompose.GetStringSlice(joinKey("services", "eln", "ports"))[0]); err != nil {
 		newComposeFile.Remove()
 		zboth.Fatal().Err(err).Msgf("Failed to update the downloaded compose file. This is necessary for future use. The file was removed.")
 	}
 	// backup the old compose file
-	if err := oldComposeFile.Rename(workDir.Join(instancesWord, name, toSprintf("old.%s.%s", time.Now().Format("060102150405"), defaultComposeFilename))); err == nil {
+	if err := oldComposeFile.Rename(workDir.Join(instancesWord, name, toSprintf("old.%s.%s", time.Now().Format("060102150405"), chemotionComposeFilename))); err == nil {
 		zboth.Info().Msgf("The old compose file is now called %s:", oldComposeFile.String())
 	} else {
 		newComposeFile.Remove()
 		zboth.Fatal().Err(err).Msgf("Failed to remove the new compose file. Check log. ABORT!")
 	}
-	if err := newComposeFile.Rename(workDir.Join(instancesWord, name, defaultComposeFilename)); err != nil {
+	if err := newComposeFile.Rename(workDir.Join(instancesWord, name, chemotionComposeFilename)); err != nil {
 		zboth.Fatal().Err(err).Msgf("Failed to rename the new compose file: %s. Check log. ABORT!", newComposeFile.String())
 	}
 	// shutdown existing instance's docker
@@ -62,28 +61,15 @@ func instanceUpgrade(givenName, use string) {
 	}
 }
 
-func getLatestComposeURL() (url string) {
-	var err error
-	if url, err = getLatestReleaseURL(); err == nil {
-		url = strings.Join([]string{url, defaultComposeFilename}, "/")
-	} else {
-		zboth.Warn().Err(err).Msgf("Could not determine the address of the latest compose file, using this one: %s.", composeURL)
-		url = composeURL
-	}
-	return
-}
-
 var upgradeInstanceRootCmd = &cobra.Command{
 	Use:   "upgrade",
 	Args:  cobra.NoArgs,
 	Short: "Upgrade (the selected) instance of " + nameCLI,
 	Run: func(cmd *cobra.Command, _ []string) {
 		var pull, backup, upgrade bool = false, false, true
-		var use string = ""
+		var use string = composeURL
 		if ownCall(cmd) {
-			if cmd.Flag("use").Changed {
-				use = cmd.Flag("use").Value.String()
-			}
+			use = cmd.Flag("use").Value.String()
 			pull = toBool(cmd.Flag("pull-only").Value.String())
 			upgrade = !pull
 		}
@@ -98,9 +84,6 @@ var upgradeInstanceRootCmd = &cobra.Command{
 			case "pull image only":
 				pull, backup, upgrade = true, false, false
 			}
-		}
-		if use == "" {
-			use = getLatestComposeURL()
 		}
 		if pull {
 			pullImages(use)

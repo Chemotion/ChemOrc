@@ -15,14 +15,14 @@
 # vendor/
 
 # default name for the executable
-chemotion
-chemotion.arm.x
-chemotion.amd.x
-chemotion.exe
+chemCLI
+chemCLI.arm.x
+chemCLI.amd.x
+chemCLI.exe
 
 # all log files
 *.log
 
 # don't include the private configuration file and instances folder
-chemotion-cli.yml
+chem_cli.*
 instances/

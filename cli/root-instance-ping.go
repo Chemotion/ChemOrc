@@ -25,7 +25,7 @@ func instancePing(givenName string) (response string) {
 var pingInstanceRootCmd = &cobra.Command{
 	Use:   "ping",
 	Args:  cobra.NoArgs,
-	Short: "Ping an instance of " + nameCLI,
+	Short: "Ping an instance of " + nameProject,
 	Run: func(cmd *cobra.Command, _ []string) {
 		if response := instancePing(currentInstance); response == "200 OK" {
 			zboth.Info().Msgf("Success, received: %s.", response)

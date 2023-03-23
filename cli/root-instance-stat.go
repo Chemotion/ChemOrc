@@ -34,7 +34,7 @@ func instanceStatus(givenName string) (status string) {
 func instanceStat(givenName string) {
 	name, services, out := getInternalName(givenName), getServices(givenName), []string{""}
 	zboth.Info().Msgf("The status of %s is: %s.\n\nIts stats are:", givenName, instanceStatus(givenName))
-	if res, err := execShell(toSprintf("%s stats --all --no-stream --no-trunc --format \"{{ .Name }} {{ .ID }} {{ .MemUsage }} {{ .MemPerc }} {{ .CPUPerc }}\"", toLower(virtualizer))); err == nil {
+	if res, err := execShell(toSprintf("%s stats --all --no-stream --no-trunc --format \"{{ .Name }} {{ .ID }} {{ .MemUsage }} {{ .MemPerc }} {{ .CPUPerc }}\"", virtualizer)); err == nil {
 		out[0] = string(res)
 		out = strings.Split(out[0], "\n")
 		zboth.Info().Msgf("%10s %10s %10s %10s %10s", "Name", "ID", " Memory", "Mem %", "CPU %")
@@ -62,12 +62,12 @@ var statInstanceRootCmd = &cobra.Command{
 	Use:     "stat",
 	Aliases: []string{"stats", "status"},
 	Args:    cobra.NoArgs,
-	Short:   "Get status and status of an instance of " + nameCLI,
+	Short:   "Get status and status of an instance of " + nameProject,
 	Run: func(cmd *cobra.Command, _ []string) {
 		if ownCall(cmd) && toBool(cmd.Flag("all").Value.String()) {
 			existingInstances := allInstances()
 			if len(existingInstances) == 1 {
-				zboth.Info().Msgf("You have only one instance of %s. Ignoring the `--all` flag.", nameCLI)
+				zboth.Info().Msgf("You have only one instance of %s. Ignoring the `--all` flag.", nameProject)
 				instanceStat(currentInstance)
 			} else {
 				for _, instance := range existingInstances {

@@ -14,7 +14,7 @@ func instanceLog(givenName, args string, logOf *[]string, follow bool) {
 			args += " --follow"
 			callVirtualizer(toSprintf("logs %s %s-%s-%d", args, name, service, rollNum))
 		} else {
-			if res, err := execShell(toSprintf("%s logs %s %s-%s-%d", toLower(virtualizer), args, name, service, rollNum)); err == nil {
+			if res, err := execShell(toSprintf("%s logs %s %s-%s-%d", virtualizer, args, name, service, rollNum)); err == nil {
 				if n, errPrint := fmt.Println(string(res)); errPrint == nil {
 					zboth.Debug().Msgf("Printed logs to screen that were %d lines long", n)
 				} else {

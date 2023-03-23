@@ -9,7 +9,6 @@ var instanceCmdTable = make(cmdTable)
 
 var instanceRootCmd = &cobra.Command{
 	Use:       "instance",
-	Aliases:   []string{"i"},
 	ValidArgs: maps.Keys(instanceCmdTable),
 	Args:      cobra.NoArgs,
 	Short:     "Manipulate instances of " + nameCLI,
@@ -22,7 +21,7 @@ var instanceRootCmd = &cobra.Command{
 			instanceCmdTable["ping"] = pingInstanceRootCmd.Run
 			instanceCmdTable["consoles"] = consoleInstanceRootCmd.Run
 			instanceCmdTable["logs"] = logInstanceRootCmd.Run
-		} else {
+		} else if instanceStatus(currentInstance) != "Created" {
 			acceptedOpts = []string{"logs"}
 			instanceCmdTable["logs"] = logInstanceRootCmd.Run
 		}
@@ -40,7 +39,7 @@ var instanceRootCmd = &cobra.Command{
 			instanceCmdTable["upgrade"] = upgradeInstanceRootCmd.Run
 			instanceCmdTable["new"] = newInstanceRootCmd.Run
 		}
-		if cmd.Use == cmd.CalledAs() || elementInSlice(cmd.CalledAs(), &cmd.Aliases) > -1 {
+		if cmd.CalledAs() == "instance" {
 			acceptedOpts = append(acceptedOpts, "exit")
 		} else {
 			acceptedOpts = append(acceptedOpts, []string{"back", "exit"}...)
