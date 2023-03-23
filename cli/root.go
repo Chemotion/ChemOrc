@@ -119,6 +119,9 @@ var rootCmd = &cobra.Command{
 				zboth.Fatal().Err(err).Msgf(err.Error())
 			}
 		}
+		if updateRequired() {
+			zboth.Info().Msgf("%s%sThere is a new version of %s available.%s", string("\033[34m"), string("\033[1m"), nameCLI, string("\033[0m"))
+		}
 		if strings.Contains(versionCLI, "pre") {
 			zboth.Warn().Msgf("This is a pre-release version. Do not use this in production.")
 		}

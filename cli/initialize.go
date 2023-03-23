@@ -102,9 +102,7 @@ func initConf() {
 						zboth.Fatal().Err(ivErr).Msgf("Failed to find the description for instance `%s` in the file: %s.", currentInstance, conf.ConfigFileUsed())
 					}
 				}
-				if conf.IsSet(joinKey(stateWord, "version")) {
-					updateRequired()
-				} else {
+				if !conf.IsSet(joinKey(stateWord, "version")) {
 					zboth.Fatal().Err(toError("unmarshal failed")).Msgf("Failed to find the mandatory key `%s` in the file: %s.", joinKey(stateWord, "version"), conf.ConfigFileUsed())
 				}
 			default:

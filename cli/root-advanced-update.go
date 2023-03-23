@@ -59,21 +59,23 @@ func updateRequired() (required bool) {
 	verKey, timeKey := joinKey(stateWord, "version"), joinKey(stateWord, "version_checked_on")
 	if conf.IsSet(verKey) {
 		checkedOn := conf.GetTime(timeKey)
+		if checkedOn.IsZero() {
+			checkedOn = time.Now().Add(time.Duration(-48) * time.Hour) // set checkedOn to 2 days in past
+		}
 		// check against version in file
 		if versionCLI == conf.GetString(verKey) {
-			if (time.Since(checkedOn).Hours() > 24) || checkedOn.IsZero() { // check every 24 hours
-				return false
+			if time.Since(checkedOn).Hours() > 24 { // check every 24 hours
+				existingVer, _ := vercompare.NewVersion(conf.GetString(verKey))
+				newVer, _ := vercompare.NewVersion(getLatestVersion())
+				required = newVer.GreaterThan(existingVer)
+				conf.Set(timeKey, time.Now())
+				if existingFile(conf.ConfigFileUsed()) {
+					writeConfig(false)
+				}
 			}
 		} else {
 			zboth.Fatal().Msgf("%s version wrong in %s, stopping as a safety measure!", nameCLI, conf.ConfigFileUsed())
 		}
-	}
-	existingVer, _ := vercompare.NewVersion(versionCLI)
-	newVer, _ := vercompare.NewVersion(getLatestVersion())
-	required = newVer.GreaterThan(existingVer)
-	conf.Set(timeKey, time.Now())
-	if existingFile(conf.ConfigFileUsed()) {
-		writeConfig(false)
 	}
 	return
 }
@@ -82,10 +84,24 @@ var updateSelfAdvancedRootCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update " + nameCLI + " itself",
 	Run: func(cmd *cobra.Command, _ []string) {
-		if selectYesNo("This process establishes contact with GitHub and gets data from them. Continue?", true) && (updateRequired() || (ownCall(cmd) && toBool(cmd.Flag("force").Value.String()))) {
-			selfUpdate()
+		if ownCall(cmd) && toBool(cmd.Flag("disable-autocheck").Value.String()) {
+			if existingFile(conf.ConfigFileUsed()) {
+				conf.Set(joinKey(stateWord, "version_checked_on"), time.Now().Add(time.Duration(876576)*time.Hour))
+				writeConfig(false)
+
+			} else {
+				if currentInstance == "" {
+					zboth.Info().Err(toError("no config file")).Msgf("This flag stores the settings in config file which is created only on installation.")
+				} else {
+					zboth.Fatal().Err(toError("config file missing")).Msgf("Could not find config file %s", conf.ConfigFileUsed())
+				}
+			}
 		} else {
-			zboth.Info().Msgf("You are on the latest version of %s.", nameCLI)
+			if selectYesNo("This process establishes contact with GitHub and gets data from them. Continue?", true) && (updateRequired() || (ownCall(cmd) && toBool(cmd.Flag("force").Value.String()))) {
+				selfUpdate()
+			} else {
+				zboth.Info().Msgf("You are on the latest version of %s.", nameCLI)
+			}
 		}
 	},
 }
@@ -93,4 +109,5 @@ var updateSelfAdvancedRootCmd = &cobra.Command{
 func init() {
 	advancedRootCmd.AddCommand(updateSelfAdvancedRootCmd)
 	updateSelfAdvancedRootCmd.Flags().Bool("force", false, toSprintf("Force update the %s.", nameCLI))
+	updateSelfAdvancedRootCmd.Flags().Bool("disable-autocheck", false, toSprintf("Disable auto-check for latest version of %s.", nameCLI))
 }
