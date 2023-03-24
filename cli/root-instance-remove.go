@@ -24,6 +24,9 @@ func instanceRemove(givenName string, force bool) (err error) {
 	// delete folders: shared folder and then named instance folder
 	if deleteShared := modifyContainer(givenName, "rm -rf", "shared", ""); deleteShared {
 		zboth.Debug().Msgf("Successfully removed `shared` folder associated with %s.", givenName)
+		if deleteServices := modifyContainer(givenName, "rm -rf", "services", ""); deleteServices {
+			zboth.Debug().Msgf("Successfully removed `services` folder associated with %s.", givenName)
+		}
 		if deleteFolder := workDir.Join(instancesWord, name).RemoveAll(); deleteFolder == nil {
 			zboth.Debug().Msgf("Successfully removed named instance folder associated with %s.", givenName)
 		} else {

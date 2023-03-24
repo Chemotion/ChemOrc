@@ -77,7 +77,8 @@ func instanceCreateDevelopment(details map[string]string) (success bool) {
 	return false
 }
 
-func createExtendedCompose(name, use string) (extendedCompose viper.Viper) {
+func createExtendedCompose(details map[string]string, use string) (extendedCompose viper.Viper) {
+	name := details["name"]
 	extendedCompose = *viper.New()
 	compose := parseCompose(use)
 	extendedCompose.Set("name", name) // set project name for the virtulizer
@@ -101,6 +102,13 @@ func createExtendedCompose(name, use string) (extendedCompose viper.Viper) {
 		} else {
 			extendedCompose.Set(joinKey("volumes", volume, "name"), name+"_"+n)
 		}
+	}
+	key := getNewUniqueID() + getNewUniqueID() + getNewUniqueID()
+	for _, service := range []string{"worker", "eln"} {
+		extendedCompose.Set(toSprintf("services.%s.environment", service), []string{"PUBLIC_URL=" + details["accessAddress"], "SECRET_KEY_BASE=" + key})
+	}
+	if extendedCompose.IsSet("services.converter") {
+		extendedCompose.Set("services.converter.environment", []string{"SECRET_KEY=" + getNewUniqueID() + getNewUniqueID() + getNewUniqueID()})
 	}
 	return
 }
@@ -139,7 +147,7 @@ func instanceCreateProduction(details map[string]string) (success bool) {
 	if err := changeKey(composeFile.String(), joinKey("services", "eln", "ports[0]"), toSprintf("%s:4000", details["port"])); err != nil {
 		zboth.Fatal().Err(err).Msgf("Failed to update the downloaded compose file. This is necessary for future use.")
 	}
-	extendedCompose := createExtendedCompose(details["name"], composeFile.String())
+	extendedCompose := createExtendedCompose(details, composeFile.String())
 	// store values in the conf, the conf file is modified only later
 	conf.Set(joinKey(instancesWord, details["givenName"], "port"), port)
 	for _, key := range []string{"name", "kind", "accessAddress"} {
@@ -161,9 +169,10 @@ func instanceCreateProduction(details map[string]string) (success bool) {
 	if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(composeCall+"up --no-start"), gotoFolder("workdir"); !success {
 		zboth.Fatal().Err(toError("compose up failed")).Msgf("Failed to setup an instance of %s. Check log. ABORT!", nameProject)
 	}
-	// initialize the env file
-	conf.Set(joinKey(instancesWord, details["givenName"], "environment", "URL_HOST"), strings.TrimPrefix(details["accessAddress"], pro+"://"))
-	conf.Set(joinKey(instancesWord, details["givenName"], "environment", "URL_PROTOCOL"), pro)
+	// // initialize the env file
+	// conf.Set(joinKey(instancesWord, details["givenName"], "environment", "URL_HOST"), strings.TrimPrefix(details["accessAddress"], pro+"://"))
+	// conf.Set(joinKey(instancesWord, details["givenName"], "environment", "URL_PROTOCOL"), pro)
+	// conf.Set(joinKey(instancesWord, details["givenName"], "environment", "PUBLIC_URL"), details["accessAddress"])
 	var firstRun bool
 	if !existingFile(conf.ConfigFileUsed()) && currentInstance == "" {
 		firstRun = true

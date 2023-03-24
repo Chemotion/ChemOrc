@@ -33,13 +33,16 @@ func upgradeThisTool(transition string) (success bool) {
 				} else {
 					zboth.Warn().Err(err).Msgf("Failed to read the .env file, using existing information to create reasonable entries. Please check the created file manually!")
 				}
+				details := make(map[string]string)
+				details["name"] = name
 				if env.IsSet("URL_HOST") && env.IsSet("URL_PROTOCOL") {
-					newConfig.Set(joinKey(instancesWord, givenName, "accessaddress"), env.GetString("URL_PROTOCOL")+"://"+env.GetString("URL_HOST"))
+					details["accessAddress"] = env.GetString("URL_PROTOCOL") + "://" + env.GetString("URL_HOST")
 				} else {
-					newConfig.Set(joinKey(instancesWord, givenName, "accessaddress"), conf.GetString(joinKey(instancesWord, givenName, "protocol")+"://"+conf.GetString(joinKey(instancesWord, givenName, "address"))))
+					details["accessAddress"] = conf.GetString(joinKey(instancesWord, givenName, "protocol") + "://" + conf.GetString(joinKey(instancesWord, givenName, "address")))
 				}
+				newConfig.Set(joinKey(instancesWord, givenName, "accessAddress"), details["accessAddress"])
 				if !existingFile(workDir.Join(instancesWord, name, cliComposeFilename).String()) {
-					extendedCompose := createExtendedCompose(name, workDir.Join(instancesWord, name, chemotionComposeFilename).String())
+					extendedCompose := createExtendedCompose(details, workDir.Join(instancesWord, name, chemotionComposeFilename).String())
 					// write out the extended compose file
 					if _, err, _ := gotoFolder(givenName), extendedCompose.WriteConfigAs(cliComposeFilename), gotoFolder("workdir"); err == nil {
 						zboth.Info().Msgf("Written extended file %s in the above step.", cliComposeFilename)
