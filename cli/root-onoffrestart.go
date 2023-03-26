@@ -40,17 +40,9 @@ func instanceStart(givenName string) {
 	if status == "Up" {
 		zboth.Warn().Msgf("The instance called %s is already running.", givenName)
 	} else {
-		// env := conf.Sub(joinKey(instancesWord, givenName, "environment"))
-		// env.SetConfigType("env")
-		// if _, errWrite, _ := gotoFolder(givenName), env.WriteConfigAs(".env"), gotoFolder("workdir"); errWrite != nil {
-		// 	zboth.Fatal().Err(errWrite).Msgf("Failed to write .env file for the container.")
-		// }
 		if errCreateFolder := modifyContainer(givenName, "mkdir -p", "shared/pullin", ""); !errCreateFolder {
 			zboth.Fatal().Err(toError("create shared/pullin failed")).Msgf("Failed to create folder inside the respective container.")
 		}
-		// if errMove := modifyContainer(givenName, "mv", ".env", "shared/pullin"); !errMove {
-		// 	zboth.Fatal().Err(toError("move .env failed")).Msgf("Failed to move .env file into the respecitive container.")
-		// }
 		if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+"up -d"), gotoFolder("workdir"); success {
 			waitFor := 120 // in seconds
 			if status == "Exited" {

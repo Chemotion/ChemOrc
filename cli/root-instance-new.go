@@ -90,6 +90,13 @@ func createExtendedCompose(details map[string]string, use string) (extendedCompo
 			extendedCompose.Set(joinKey(section, k, "labels"), map[string]string{"net.chemotion.cli.project": name})
 		}
 	}
+	// create an additional service to run commands
+	extendedCompose.Set(joinKey("services", "executor", "image"), compose.GetString(joinKey("services", "eln", "image")))
+	extendedCompose.Set(joinKey("services", "executor", "volumes"), compose.GetStringSlice(joinKey("services", "eln", "volumes")))
+	extendedCompose.Set(joinKey("services", "executor", "environment"), []string{"CONFIG_ROLE=eln"})
+	extendedCompose.Set(joinKey("services", "executor", "depends_on"), []string{"db"})
+	extendedCompose.Set(joinKey("services", "executor", "networks"), []string{"chemotion"})
+	extendedCompose.Set(joinKey("services", "executor", "networks"), []string{"chemotion"})
 	// set unique name for volumes in the compose file
 	volumes := getSubHeadings(&compose, "volumes")
 	for _, volume := range volumes {
@@ -104,7 +111,7 @@ func createExtendedCompose(details map[string]string, use string) (extendedCompo
 		}
 	}
 	key := getNewUniqueID() + getNewUniqueID() + getNewUniqueID()
-	for _, service := range []string{"worker", "eln"} {
+	for _, service := range []string{"worker", "eln", "executor"} {
 		extendedCompose.Set(toSprintf("services.%s.environment", service), []string{"PUBLIC_URL=" + details["accessAddress"], "SECRET_KEY_BASE=" + key})
 	}
 	if extendedCompose.IsSet("services.converter") {
@@ -169,15 +176,16 @@ func instanceCreateProduction(details map[string]string) (success bool) {
 	if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(composeCall+"up --no-start"), gotoFolder("workdir"); !success {
 		zboth.Fatal().Err(toError("compose up failed")).Msgf("Failed to setup an instance of %s. Check log. ABORT!", nameProject)
 	}
-	// // initialize the env file
-	// conf.Set(joinKey(instancesWord, details["givenName"], "environment", "URL_HOST"), strings.TrimPrefix(details["accessAddress"], pro+"://"))
-	// conf.Set(joinKey(instancesWord, details["givenName"], "environment", "URL_PROTOCOL"), pro)
-	// conf.Set(joinKey(instancesWord, details["givenName"], "environment", "PUBLIC_URL"), details["accessAddress"])
 	var firstRun bool
 	if !existingFile(conf.ConfigFileUsed()) && currentInstance == "" {
 		firstRun = true
 		currentInstance = details["givenName"]
 	}
+	compose := viper.New()
+	compose.SetConfigFile(composeFile.String())
+	compose.ReadInConfig()
+	image := compose.GetString(joinKey("services", "eln", "image"))
+	conf.Set(joinKey(instancesWord, details["givenName"], "image"), image)
 	if err := writeConfig(firstRun); err != nil {
 		zboth.Fatal().Err(err).Msg("Failed to write config file. Check log. ABORT!") // we want a fatal error in this case, `rewriteConfig()` does a Warn error
 	}

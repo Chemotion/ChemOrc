@@ -39,7 +39,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"golang.org/x/exp/maps"
 )
 
 const (
@@ -96,12 +95,11 @@ var rootCmdTable = make(cmdTable)
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:       toSprintf("%s", commandForCLI),
-	Short:     "CLI for Chemotion ELN",
-	Long:      "Chemotion ELN is an Electronic Lab Notebook solution.\nDeveloped for researchers, the software aims to work for you.\nSee, https://www.chemotion.net.",
-	Version:   versionCLI,
-	Args:      cobra.NoArgs,
-	ValidArgs: maps.Keys(rootCmdTable),
+	Use:     toSprintf("%s", commandForCLI),
+	Short:   "CLI for Chemotion ELN",
+	Long:    "Chemotion ELN is an Electronic Lab Notebook solution.\nDeveloped for researchers, the software aims to work for you.\nSee, https://www.chemotion.net.",
+	Version: versionCLI,
+	Args:    cobra.NoArgs,
 	// The following lines are the action associated with a bare application run i.e. without any arguments
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if zerolog.SetGlobalLevel(zerolog.InfoLevel); conf.GetBool(joinKey(stateWord, "debug")) {

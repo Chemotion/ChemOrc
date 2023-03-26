@@ -1,37 +1,20 @@
 package cli
 
 import (
+	"strings"
+
 	"github.com/spf13/cobra"
 )
 
 func instanceBackup(givenName, portion string) {
-	// deliver payload
-	//TODO: include version check before delivering payload
-	gotoFolder(givenName)
-	var err, msg string
-	status := instanceStatus(givenName)
-	if successStart := callVirtualizer(composeCall + "start eln"); successStart {
-		if successCurl := callVirtualizer(composeCall + "exec eln curl https://raw.githubusercontent.com/harivyasi/chemotion/chemotion-cli/chemotion-cli/payload/backup.sh --output /embed/scripts/backup.sh"); successCurl {
-			if successBackUp := callVirtualizer(composeCall + "exec --env BACKUP_WHAT=" + portion + " eln chemotion backup"); successBackUp {
-				zboth.Info().Msgf("Backup successful.")
-			} else {
-				msg = "Backup process failed."
-				err = "backup failed"
-			}
-		} else {
-			err = "backup.sh update failed"
-			msg = "Could not fix the broken `backup.sh`. Can't create backup."
-		}
-		if status != "Up" { // if instance was not Up prior to start then stop it now
-			callVirtualizer(composeCall + "stop") // need to be low-level because only one service is running
-		}
-	} else {
-		err = "starting eln service failed"
-		msg = "Could not backup unless it starts. Can't create backup."
+	calledCmd := "exec --env BACKUP_WHAT=" + portion + "executor chemotion backup"
+	if strings.HasSuffix(conf.GetString(joinKey(instancesWord, currentInstance, "image")), "eln-1.3.1p220712") {
+		calledCmd = "exec --env BACKUP_WHAT=" + portion + "executor bash -c \"curl " + backupshURL + " --output /embed/scripts/backup.sh && chemotion backup\""
 	}
-	gotoFolder("workdir")
-	if err != "" {
-		zboth.Fatal().Err(toError(err)).Msgf(msg)
+	if _, successBackUp, _ := gotoFolder(givenName), callVirtualizer(composeCall+calledCmd), gotoFolder("workdir"); successBackUp {
+		zboth.Info().Msgf("Backup successful.")
+	} else {
+		zboth.Fatal().Err(toError("backup failed")).Msgf("Backup process failed.")
 	}
 }
 

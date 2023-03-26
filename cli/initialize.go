@@ -95,11 +95,13 @@ func initConf() {
 			case "2.0":
 				if conf.IsSet(joinKey(stateWord, selectorWord)) {
 					if currentInstance == "" { // i.e. the flag was not set
-						if errUnmarshal := conf.UnmarshalKey(joinKey(stateWord, selectorWord), &currentInstance); errUnmarshal != nil {
+						if errUnmarshal := conf.UnmarshalKey(joinKey(stateWord, selectorWord), &currentInstance); errUnmarshal == nil {
+							if ivErr := instanceValidate(currentInstance); ivErr != nil { // confirm that the specified current instance is described in the config file
+								zboth.Fatal().Err(ivErr).Msgf("Failed to find the description for instance `%s` in the file: %s.", currentInstance, conf.ConfigFileUsed())
+							}
+						} else {
 							zboth.Fatal().Err(errUnmarshal).Msgf("Failed to unmarshal the key %s in the file: %s.", joinKey(stateWord, selectorWord), conf.ConfigFileUsed())
 						}
-					} else if ivErr := instanceValidate(currentInstance); ivErr != nil { // confirm that the specified current instance is described in the config file
-						zboth.Fatal().Err(ivErr).Msgf("Failed to find the description for instance `%s` in the file: %s.", currentInstance, conf.ConfigFileUsed())
 					}
 				}
 				if !conf.IsSet(joinKey(stateWord, "version")) {
