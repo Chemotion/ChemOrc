@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func dropIntoConsole(givenName string, consoleName string) {
+func dropIntoConsole(givenName string, consoleName string) { // see if can be moved to callVirtualizer way of calling virtualizer
 	commandExec := exec.Command(virtualizer, []string{"compose", "exec", "eln", "chemotion", consoleName}...)
 	commandExec.Stdin, commandExec.Stdout, commandExec.Stderr = os.Stdin, os.Stdout, os.Stderr
 	status := instanceStatus(givenName)

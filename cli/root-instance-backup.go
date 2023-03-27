@@ -7,9 +7,9 @@ import (
 )
 
 func instanceBackup(givenName, portion string) {
-	calledCmd := "exec --env BACKUP_WHAT=" + portion + "executor chemotion backup"
+	calledCmd := toSprintf("--profile execution run --rm -e BACKUP_WHAT=%s executor chemotion backup", portion)
 	if strings.HasSuffix(conf.GetString(joinKey(instancesWord, currentInstance, "image")), "eln-1.3.1p220712") {
-		calledCmd = "exec --env BACKUP_WHAT=" + portion + "executor bash -c \"curl " + backupshURL + " --output /embed/scripts/backup.sh && chemotion backup\""
+		calledCmd = toSprintf("--profile execution run --rm -e BACKUP_WHAT=%s executor bash -c \"curl %s --output /embed/scripts/backup.sh && chemotion backup\"", portion, backupshURL)
 	}
 	if _, successBackUp, _ := gotoFolder(givenName), callVirtualizer(composeCall+calledCmd), gotoFolder("workdir"); successBackUp {
 		zboth.Info().Msgf("Backup successful.")
@@ -58,6 +58,9 @@ var backupInstanceRootCmd = &cobra.Command{
 				}
 			}
 			instanceBackup(currentInstance, portion)
+			if status != "Up" {
+				_, _, _ = gotoFolder(currentInstance), callVirtualizer(composeCall+"stop"), gotoFolder("workdir")
+			}
 		} else {
 			zboth.Debug().Msgf("Backup operation cancelled.")
 		}

@@ -25,18 +25,20 @@ var instanceRootCmd = &cobra.Command{
 			instanceCmdTable["logs"] = logInstanceRootCmd.Run
 		}
 		if len(allInstances()) > 1 {
-			acceptedOpts = append(acceptedOpts, []string{"switch", "backup", "upgrade", "list", "new", "remove"}...)
+			acceptedOpts = append(acceptedOpts, []string{"switch", "backup", "upgrade", "list", "new", "restore", "remove"}...)
 			instanceCmdTable["switch"] = switchInstanceRootCmd.Run
 			instanceCmdTable["backup"] = backupInstanceRootCmd.Run
 			instanceCmdTable["upgrade"] = upgradeInstanceRootCmd.Run
 			instanceCmdTable["list"] = listInstanceRootCmd.Run
 			instanceCmdTable["remove"] = removeInstanceRootCmd.Run
 			instanceCmdTable["new"] = newInstanceRootCmd.Run
+			instanceCmdTable["restore"] = restoreInstanceRootCmd.Run
 		} else {
-			acceptedOpts = append(acceptedOpts, []string{"backup", "upgrade", "new"}...)
+			acceptedOpts = append(acceptedOpts, []string{"backup", "upgrade", "new", "restore"}...)
 			instanceCmdTable["backup"] = backupInstanceRootCmd.Run
 			instanceCmdTable["upgrade"] = upgradeInstanceRootCmd.Run
 			instanceCmdTable["new"] = newInstanceRootCmd.Run
+			instanceCmdTable["restore"] = restoreInstanceRootCmd.Run
 		}
 		if cmd.CalledAs() == "instance" {
 			acceptedOpts = append(acceptedOpts, "exit")

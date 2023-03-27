@@ -107,6 +107,14 @@ func addressValidate(input string) (err error) {
 	return
 }
 
+func fileValidate(input string) (err error) {
+	err = textValidate(input)
+	if !existingFile(input) {
+		err = toError("this file does not exist")
+	}
+	return
+}
+
 // kind of opposite of instanceValidate
 func newInstanceValidate(input string) (err error) {
 	err = textValidate(input)

@@ -82,21 +82,21 @@ func createExtendedCompose(details map[string]string, use string) (extendedCompo
 	extendedCompose = *viper.New()
 	compose := parseCompose(use)
 	extendedCompose.Set("name", name) // set project name for the virtulizer
-	sections := []string{"services", "volumes", "networks"}
-	// set labels on services, volumes and networks for future identification
-	for _, section := range sections {
-		subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services, volumes and networks
-		for _, k := range subheadings {
-			extendedCompose.Set(joinKey(section, k, "labels"), map[string]string{"net.chemotion.cli.project": name})
-		}
-	}
 	// create an additional service to run commands
 	extendedCompose.Set(joinKey("services", "executor", "image"), compose.GetString(joinKey("services", "eln", "image")))
 	extendedCompose.Set(joinKey("services", "executor", "volumes"), compose.GetStringSlice(joinKey("services", "eln", "volumes")))
 	extendedCompose.Set(joinKey("services", "executor", "environment"), []string{"CONFIG_ROLE=eln"})
 	extendedCompose.Set(joinKey("services", "executor", "depends_on"), []string{"db"})
 	extendedCompose.Set(joinKey("services", "executor", "networks"), []string{"chemotion"})
-	extendedCompose.Set(joinKey("services", "executor", "networks"), []string{"chemotion"})
+	extendedCompose.Set(joinKey("services", "executor", "profiles"), []string{"execution"})
+	// set labels on services, volumes and networks for future identification
+	sections := []string{"services", "volumes", "networks"}
+	for _, section := range sections {
+		subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services, volumes and networks
+		for _, k := range subheadings {
+			extendedCompose.Set(joinKey(section, k, "labels"), map[string]string{"net.chemotion.cli.project": name})
+		}
+	}
 	// set unique name for volumes in the compose file
 	volumes := getSubHeadings(&compose, "volumes")
 	for _, volume := range volumes {
@@ -143,8 +143,9 @@ func instanceCreateProduction(details map[string]string) (success bool) {
 	// download and modify the compose file
 	var composeFile pathlib.Path
 	if existingFile(details["use"]) {
-		if err := copyfile(details["use"], workDir.Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename)).String()); err == nil {
-			composeFile = *workDir.Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename))
+		dest := workDir.Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename))
+		if err := copyfile(details["use"], dest.String()); err == nil {
+			composeFile = *dest
 		} else {
 			zboth.Fatal().Err(err).Msgf("Failed to copy the suggested compose file: %s. This is necessary for future use.")
 		}
@@ -194,7 +195,7 @@ func instanceCreateProduction(details map[string]string) (success bool) {
 
 // interaction when creating a new instance
 func processInstanceCreateCmd(cmd *cobra.Command, details map[string]string) (create bool) {
-	askName, askAddress, askDevelopment := true, true, true
+	askName, askAddress, askDevelopment := true, true, false
 	create = true
 	details["accessAddress"] = addressDefault
 	details["kind"] = "Production"
@@ -221,11 +222,12 @@ func processInstanceCreateCmd(cmd *cobra.Command, details map[string]string) (cr
 		if cmd.Flag("use").Changed {
 			details["use"] = cmd.Flag("use").Value.String()
 		}
-		if cmd.Flag("development") != nil {
-			if toBool(cmd.Flag("development").Value.String()) {
-				details["kind"] = "Development"
-			}
-			askDevelopment = !cmd.Flag("use").Changed
+		if cmd.Flag("development") == nil {
+			askDevelopment = false
+		} else if toBool(cmd.Flag("development").Value.String()) {
+			details["kind"] = "Development"
+		} else {
+			askDevelopment = true
 		}
 	}
 	if isInteractive(false) {
