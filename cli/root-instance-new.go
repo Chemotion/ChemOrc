@@ -17,7 +17,6 @@ func parseCompose(use string) (compose viper.Viper) {
 		composeFilepath pathlib.Path
 		isUrl           bool
 	)
-	// TODO: check on the version of the compose file
 	if existingFile(use) {
 		composeFilepath = *pathlib.NewPath(use)
 	} else if _, err := url.ParseRequestURI(use); err == nil {
@@ -185,8 +184,7 @@ func instanceCreateProduction(details map[string]string) (success bool) {
 	compose := viper.New()
 	compose.SetConfigFile(composeFile.String())
 	compose.ReadInConfig()
-	image := compose.GetString(joinKey("services", "eln", "image"))
-	conf.Set(joinKey(instancesWord, details["givenName"], "image"), image)
+	conf.Set(joinKey(instancesWord, details["givenName"], "image"), compose.GetString(joinKey("services", "eln", "image")))
 	if err := writeConfig(firstRun); err != nil {
 		zboth.Fatal().Err(err).Msg("Failed to write config file. Check log. ABORT!") // we want a fatal error in this case, `rewriteConfig()` does a Warn error
 	}
