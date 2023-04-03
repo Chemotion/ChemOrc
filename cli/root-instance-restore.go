@@ -15,10 +15,10 @@ var restoreInstanceRootCmd = &cobra.Command{
 		}
 		if (db == "" || data == "") && isInteractive(true) {
 			if db == "" {
-				db = getString("Please enter the absolute path of your database backup file (e.g. ./backup.sql.gz): ", fileValidate)
+				db = getString("Please enter the absolute path of your database backup file (e.g. /path/to/backup.sql.gz): ", fileValidate)
 			}
 			if data == "" {
-				data = getString("Please enter the absolute path of your data backup file (e.g. ./backup.data.tar.gz): ", fileValidate)
+				data = getString("Please enter the absolute path of your data backup file (e.g. /path/to/backup.data.tar.gz): ", fileValidate)
 			}
 		}
 		details := make(map[string]string)

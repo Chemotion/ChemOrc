@@ -44,7 +44,7 @@ import (
 const (
 	nameProject                     = "Chemotion ELN"
 	nameCLI                         = "ChemCLI"
-	versionCLI                      = "0.2.0-pre1"
+	versionCLI                      = "0.2.0"
 	versionConfig                   = "2.0"
 	logFilename                     = "chem_cli.log"
 	defaultConfigFilepath           = "chem_cli.yml"
@@ -59,7 +59,7 @@ const (
 	minimumVirtualizer              = "20.10.10" // so as to support docker compose files version 3.9 and forcing Docker Desktop >= 4
 	maxInstancesOfKind              = 63
 	firstPort                uint64 = 4000
-	repositoryGH                    = "https://github.com/harivyasi/ChemCLI"
+	repositoryGH                    = "https://github.com/Chemotion/ChemCLI"
 	releaseURL                      = repositoryGH + "/releases/latest"
 	composeURL                      = releaseURL + "/download/docker-compose.yml"
 	backupshURL                     = releaseURL + "/download/backup.sh"
