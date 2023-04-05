@@ -26,8 +26,8 @@ var restoreInstanceRootCmd = &cobra.Command{
 			var success bool
 			if success = instanceCreateProduction(details); success {
 				zboth.Info().Msgf("Successfully created a new production instance. Now restoring the backup into it")
-				if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer("cp "+data+" "+details["name"]+"-eln-1:/backup/backup.data.tar.gz"), gotoFolder("workdir"); success {
-					if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer("cp "+db+" "+details["name"]+"-eln-1:/backup/backup.sql.gz"), gotoFolder("workdir"); success {
+				if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(toSprintf("cp %s %s-%s-%d:/backup/backup.data.tar.gz", data, details["name"], primaryService, rollNum)), gotoFolder("workdir"); success {
+					if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(toSprintf("cp %s %s-%s-%d:/backup/backup.sql.gz", db, details["name"], primaryService, rollNum)), gotoFolder("workdir"); success {
 						zboth.Info().Msgf("Backup files copied successfully. Now attempting restore them!")
 						if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(composeCall+"--profile execution run --rm -e FORCE_DB_RESET=1 executor chemotion restore"), gotoFolder("workdir"); success {
 							zboth.Info().Msgf("Restoration completed successfully. Once switched on, `%s` can be found at: %s", details["givenName"], details["accessAddress"])

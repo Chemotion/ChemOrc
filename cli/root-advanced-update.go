@@ -11,11 +11,11 @@ import (
 )
 
 // update the tool itself
-func selfUpdate() {
+func selfUpdate(version string) {
 	oldVersion := pathlib.NewPath(commandForCLI)
 	stat, _ := oldVersion.Stat()
 	cliFileName := oldVersion.Name()
-	url := releaseURL + "/download/" + cliFileName
+	url := toSprintf("%s/releases/download/%s/%s", repositoryGH, version, nameCLI)
 	newVersion := downloadFile(url, workDir.Join(toSprintf("%s.new", cliFileName)).String())
 	if err := newVersion.Chmod(stat.Mode() | 100); err != nil { // make sure that it remains executable for the ErrUseLastResponse
 		zboth.Warn().Err(err).Msgf("Could not grant executable permission to the downloaded file. Please do it yourself.")
@@ -23,8 +23,13 @@ func selfUpdate() {
 	if errOld := oldVersion.RenameStr(toSprintf("%s.old", cliFileName)); errOld == nil {
 		if errNew := newVersion.RenameStr(cliFileName); errNew == nil {
 			zboth.Info().Msgf("Successfully downloaded the new version. Old version is available as %s and is safe to remove.", oldVersion.Name())
+			conf.Set(joinKey(stateWord, "version"), version)
+			if err := writeConfig(false); err != nil {
+				zboth.Warn().Err(err).Msgf("Failed to rewrite config file. You will also need to update the %s.version to %s in the %s file manually.", stateWord, version, conf.ConfigFileUsed())
+			}
 		} else {
 			zboth.Warn().Err(errNew).Msgf("Successfully downloaded the new version. Please rename it to %s for further use. The old version is available as %s and is safe to remove.", cliFileName, oldVersion.Name())
+			zboth.Info().Msgf("You will also need to update the %s.version to %s in the %s file manually.", stateWord, version, conf.ConfigFileUsed())
 		}
 	} else {
 		zboth.Warn().Err(errOld).Msgf("Successfully downloaded the new version but failed to rename the old one. The new version is called %s, please rename it %s. The old version is safe to remove.", newVersion.Name(), cliFileName)
@@ -39,7 +44,7 @@ func getLatestVersion() (version string) {
 		},
 	}
 	var url string
-	if resp, errGet := client.Get(releaseURL); errGet == nil {
+	if resp, errGet := client.Get(repositoryGH + "/releases/latest"); errGet == nil {
 		if loc, errLoc := resp.Location(); errLoc == nil {
 			url = loc.String()
 			urlInParts := strings.Split(url, "/")
@@ -98,7 +103,10 @@ var updateSelfAdvancedRootCmd = &cobra.Command{
 			}
 		} else {
 			if selectYesNo("This process establishes contact with GitHub and gets data from them. Continue?", true) && (updateRequired() || (ownCall(cmd) && toBool(cmd.Flag("force").Value.String()))) {
-				selfUpdate()
+				latestVersion := getLatestVersion()
+				if selectYesNo(toSprintf("Update %s from version %s to version %s", nameCLI, versionCLI, latestVersion), true) {
+					selfUpdate(latestVersion)
+				}
 			} else {
 				zboth.Info().Msgf("You are on the latest version of %s.", nameCLI)
 			}

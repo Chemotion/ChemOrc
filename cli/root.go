@@ -43,8 +43,8 @@ import (
 
 const (
 	nameProject                     = "Chemotion ELN"
-	nameCLI                         = "ChemCLI"
-	versionCLI                      = "0.2.1"
+	nameCLI                         = "chemCLI"
+	versionCLI                      = "0.2.2"
 	versionConfig                   = "2.0"
 	logFilename                     = "chem_cli.log"
 	defaultConfigFilepath           = "chem_cli.yml"
@@ -60,9 +60,8 @@ const (
 	maxInstancesOfKind              = 63
 	firstPort                uint64 = 4000
 	repositoryGH                    = "https://github.com/Chemotion/ChemCLI"
-	releaseURL                      = repositoryGH + "/releases/latest"
-	composeURL                      = releaseURL + "/download/docker-compose.yml"
-	backupshURL                     = releaseURL + "/download/backup.sh"
+	composeURL                      = repositoryGH + "/releases/latest/download/docker-compose.yml"
+	backupshURL                     = repositoryGH + "/releases/latest/download/backup.sh"
 	rollNum                         = 1 // the default index number assigned by virtualizer to every container
 	primaryService                  = "eln"
 )
