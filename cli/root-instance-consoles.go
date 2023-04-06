@@ -2,33 +2,30 @@ package cli
 
 import (
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/spf13/cobra"
 )
 
 func dropIntoConsole(givenName string, consoleName string) { // see if can be moved to callVirtualizer way of calling virtualizer
-	commandExec := exec.Command(virtualizer, []string{"compose", "exec", "eln", "chemotion", consoleName}...)
-	commandExec.Stdin, commandExec.Stdout, commandExec.Stderr = os.Stdin, os.Stdout, os.Stderr // TODO-v3: see if this can be merged with execShell
-	status := instanceStatus(givenName)
+	status, properName := instanceStatus(givenName), consoleName
 	switch consoleName { // use proper name when printing to user
 	case "shell":
-		consoleName = "shell"
+		properName = "shell"
 	case "railsc":
-		consoleName = "Rails console"
+		properName = "Rails console"
 	case "psql":
-		consoleName = "postgreSQL console"
+		properName = "postgreSQL console"
 	}
 	if !(elementInSlice(status, &[]string{"Created", "Exited"}) > 0) {
-		zboth.Info().Msgf("Entering %s for instance `%s`.", consoleName, givenName)
-		if _, err, _ := gotoFolder(givenName), commandExec.Run(), gotoFolder("workdir"); err == nil {
-			zboth.Debug().Msgf("Successfuly closed %s for `%s`.", consoleName, givenName)
+		zboth.Info().Msgf("Entering %s for instance `%s`.", properName, givenName)
+		if _, success, _ := gotoFolder(givenName), callVirtualizer(toSprintf("compose exec %s chemotion %s", primaryService, consoleName)), gotoFolder("workdir"); success {
+			zboth.Debug().Msgf("Successfuly closed %s for `%s`.", properName, givenName)
 		} else {
-			zboth.Fatal().Err(err).Msgf("%s ended with exit message: %s.", consoleName, err.Error())
+			zboth.Warn().Msgf("%s ended with an error.", properName)
 		}
 	} else {
-		zboth.Warn().Err(toError("instance is %s", status)).Msgf("Cannot start a %s for `%s`. Instance is %s.", consoleName, givenName, status)
+		zboth.Warn().Err(toError("instance is %s", status)).Msgf("Cannot start a %s for `%s`. Instance is %s.", properName, givenName, status)
 	}
 }
 
@@ -39,7 +36,11 @@ var consoleInstanceRootCmd = &cobra.Command{
 	ValidArgs: []string{"shell", "railsc", "psql"},
 	Run: func(cmd *cobra.Command, args []string) {
 		var selected string
-		if ownCall(cmd) && len(args) != 1 {
+		if ownCall(cmd) {
+			if selected = "multiple arguments"; len(args) == 1 {
+				selected = args[0]
+			}
+		} else {
 			if isInteractive(true) {
 				acceptedOpts := []string{"shell", "ruby on rails", "postgreSQL"}
 				if ownCall(cmd) {
@@ -49,8 +50,6 @@ var consoleInstanceRootCmd = &cobra.Command{
 				}
 				selected = selectOpt(acceptedOpts, "")
 			}
-		} else {
-			selected = args[0]
 		}
 		switch selected {
 		case "shell", "bash", "sh":
@@ -63,8 +62,10 @@ var consoleInstanceRootCmd = &cobra.Command{
 			cmd.Run(cmd, args)
 		case "exit":
 			os.Exit(0)
+		case "multiple arguments":
+			zboth.Warn().Msgf("console expects only ONE argument of the following: %s.", strings.Join(cmd.ValidArgs, ", "))
 		default:
-			zboth.Info().Msgf("console expects one of the following: %.", strings.Join(cmd.ValidArgs, ", "))
+			zboth.Info().Msgf("console expects one of the following: %s.", strings.Join(cmd.ValidArgs, ", "))
 		}
 
 	},

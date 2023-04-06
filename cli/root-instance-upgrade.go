@@ -28,7 +28,7 @@ func instanceUpgrade(givenName, use string) {
 	// get port from old compose
 	oldComposeFile := workDir.Join(instancesWord, name, chemotionComposeFilename)
 	oldCompose := parseCompose(oldComposeFile.String())
-	if err := changeKey(newComposeFile.String(), joinKey("services", "eln", "ports[0]"), oldCompose.GetStringSlice(joinKey("services", "eln", "ports"))[0]); err != nil {
+	if err := changeKey(newComposeFile.String(), joinKey("services", primaryService, "ports[0]"), oldCompose.GetStringSlice(joinKey("services", primaryService, "ports"))[0]); err != nil {
 		newComposeFile.Remove()
 		zboth.Fatal().Err(err).Msgf("Failed to update the downloaded compose file. This is necessary for future use. The file was removed.")
 	}

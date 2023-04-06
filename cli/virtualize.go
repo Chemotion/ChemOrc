@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"bytes"
-	"io"
 	"os"
 	"os/exec"
 	"runtime"
@@ -72,16 +70,12 @@ func callVirtualizer(args string) (success bool) {
 	args = strings.TrimSpace(args)
 	commandArgs := strings.Split(args, " ")
 	commandExec := exec.Command(virtualizer, commandArgs...)
-	// see https://blog.kowalczyk.info/article/wOYk/advanced-command-execution-in-go-with-osexec.html#:~:text=Capture%20output%20but%20also%20show%20progress%20%233
-	var stdoutBuf, stderrBuf bytes.Buffer
-	commandExec.Stdout = io.MultiWriter(os.Stdout, &stdoutBuf)
-	commandExec.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
+	commandExec.Stdin, commandExec.Stdout, commandExec.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := commandExec.Run(); err == nil {
 		success = true
 	} else {
 		success = false
-		zboth.Warn().Err(err).Msgf("%s command failed! Check log. ABORT!", virtualizer)
+		zboth.Warn().Err(err).Msgf("%s command failed with error %s! ABORT!", virtualizer, err.Error())
 	}
-	// TODO-v3: make this more elegent by using a virtual terminal, see https://github.com/creack/pty
 	return
 }

@@ -18,20 +18,20 @@ jobs:
           cp   payload/docker-compose.yml .
           cp   payload/backup.sh .
           go   mod                        verify
-          GOOS=linux    GOARCH=amd64  go  build -o chemotion
-          GOOS=darwin   GOARCH=arm64  go  build -o chemotion.arm.osx
-          GOOS=darwin   GOARCH=amd64  go  build -o chemotion.amd.osx
-          GOOS=windows  GOARCH=amd64  go  build -o chemotion.exe
+          GOOS=linux    GOARCH=amd64  go  build -o chemCLI
+          GOOS=darwin   GOARCH=arm64  go  build -o chemCLI.arm.osx
+          GOOS=darwin   GOARCH=amd64  go  build -o chemCLI.amd.osx
+          GOOS=windows  GOARCH=amd64  go  build -o chemCLI.exe
       - name: Release Binaries
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           prerelease: false
           files: |
-            chemotion
-            chemotion.arm.osx
-            chemotion.amd.osx
-            chemotion.exe
+            chemCLI
+            chemCLI.arm.osx
+            chemCLI.amd.osx
+            chemCLI.exe
             docker-compose.yml
             backup.sh
       - name: Run latest-tag

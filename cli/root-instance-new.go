@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// helper to get a compose file
+// helper to get a compose (or YAML) file
 func parseCompose(use string) (compose viper.Viper) {
 	var (
 		composeFilepath pathlib.Path
@@ -37,7 +37,7 @@ func parseCompose(use string) (compose viper.Viper) {
 		composeFilepath.Remove()
 	}
 	if err != nil {
-		zboth.Fatal().Err(err).Msgf("Invalid formatting for a compose file.")
+		zboth.Fatal().Err(err).Msgf("Failed to read the file: %s", compose.ConfigFileUsed())
 	}
 	return
 }
@@ -82,9 +82,9 @@ func createExtendedCompose(details map[string]string, use string) (extendedCompo
 	compose := parseCompose(use)
 	extendedCompose.Set("name", name) // set project name for the virtulizer
 	// create an additional service to run commands
-	extendedCompose.Set(joinKey("services", "executor", "image"), compose.GetString(joinKey("services", "eln", "image")))
-	extendedCompose.Set(joinKey("services", "executor", "volumes"), compose.GetStringSlice(joinKey("services", "eln", "volumes")))
-	extendedCompose.Set(joinKey("services", "executor", "environment"), []string{"CONFIG_ROLE=eln"})
+	extendedCompose.Set(joinKey("services", "executor", "image"), compose.GetString(joinKey("services", primaryService, "image")))
+	extendedCompose.Set(joinKey("services", "executor", "volumes"), compose.GetStringSlice(joinKey("services", primaryService, "volumes")))
+	extendedCompose.Set(joinKey("services", "executor", "environment"), []string{toSprintf("CONFIG_ROLE=%s", primaryService)})
 	extendedCompose.Set(joinKey("services", "executor", "depends_on"), []string{"db"})
 	extendedCompose.Set(joinKey("services", "executor", "networks"), []string{"chemotion"})
 	extendedCompose.Set(joinKey("services", "executor", "profiles"), []string{"execution"})
