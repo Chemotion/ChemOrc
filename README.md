@@ -25,17 +25,17 @@ example:    chemCLI       instance     logs     --all
 
 Following features have been implemented:
 
-- ✔ Installation & Deployment: `chemotion` > `install` installs a production instance that is ready to use.
-- ✔ Instance life cycle commands: `chemotion on|off|restart` and `chemotion instance stats|ping|logs`.
-- ✔ Upgrade: `chemotion` > `instance` > `upgrade` to upgrade an existing Chemotion instance.
-- ✔ Backups: `chemotion` > `instance` > `backup` to save the data associated with an instance.
-- ✔ Restore: `chemotion` > `instance` > `restore` to save the data associated with an instance into a new instance.
-- ✔ Multiple instances: `chemotion instance new|list|switch|remove` can be used to manage multiple instances.
-- ✔ Administrative consoles: `chemotion` > `instance` > `consoles` to drop into `shell`, `postgreSQL` and `rails` consoles.
+- ✔ Installation & Deployment: `./chemCLI` > `install` installs a production instance that is ready to use.
+- ✔ Instance life cycle commands: `./chemCLI` > `on|off|restart` and `./chemCLI` > `instance` > `stats|ping|logs`.
+- ✔ Upgrade: `./chemCLI` > `instance` > `upgrade` to upgrade an existing Chemotion instance.
+- ✔ Backups: `./chemCLI` > `instance` > `backup` to save the data associated with an instance.
+- ✔ Restore: `./chemCLI` > `instance` > `restore` to save the data associated with an instance into a new instance.
+- ✔ Multiple instances: `./chemCLI` > `instance` > `new|list|switch|remove` can be used to manage multiple instances.
+- ✔ Administrative consoles: `./chemCLI` > `instance` > `consoles` > `<console_name>` to drop into `shell`, `postgreSQL` and `rails` consoles.
 
 Following features are under consideration planned:
 
-- Manage Settings: `chemotion instance settings` to configure settings of an instance and to assist with auto-configuring wizards.
+- Manage Settings: `./chemCLI instance settings` to configure settings of an instance and to assist with auto-configuring wizards.
 - A GUI interface to monitor instances being run.
 - Have another feature in mind: [Open an issue](https://github.com/Chemotion/ChemCLI/issues) or contact our [helpdesk](https://chemotion.net/helpdesk)!
 
@@ -43,7 +43,7 @@ Following features are under consideration planned:
 
 ### Getting the tool
 
-The ChemCLI tool is a binary file called `chemCLI` and needs no installation. The only prerequisite is that you install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (and, on Windows, [WSL](https://docs.microsoft.com/en-us/windows/wsl/install)). Depending on your OS, you can download the lastest release of the CLI from [here](https://github.com/Chemotion/ChemCLI/releases/). Builds for the following systems are available:
+The ChemCLI tool is a binary file called `chemCLI` and needs no installation. The only prerequisite is that you install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (and, on Windows, [WSL](https://docs.microsoft.com/en-us/windows/wsl/install)). Depending on your OS, you can download the latest release of the CLI from [here](https://github.com/Chemotion/ChemCLI/releases/). Builds for the following systems are available:
 
 - Linux, amd64
 - Windows, amd64; remember to turn on [Docker integration with WSL](https://docs.docker.com/desktop/windows/wsl/)
@@ -105,8 +105,8 @@ To turn on, and off, the `selected` instance, issue the commands:
 As long as you installed an instance of Chemotion using this tool, the upgrade process is quite straightforward:
 
 - First make sure that you have the [latest version of this tool](#updating-the-tool).
-- Prepare for update by running `chemotion` > `instance` > `upgrade` > `pull image only`. This will download the latest chemotion image from the internet if not already present on the system. Doing this saves you time later (during scheduled downtime).
-- Schedule a downtime of at least 15 minutes; more if you have a lot of data that needs to backed up. During the downtime, run `chemotion` > `instance` > `all actions` to backup your data followed by an upgrade of the instance.
+- Prepare for update by running `./chemCLI` > `instance` > `upgrade` > `pull image only`. This will download the latest chemotion image from the internet if not already present on the system. Doing this saves you time later (during scheduled downtime).
+- Schedule a downtime of at least 15 minutes; more if you have a lot of data that needs to backed up. During the downtime, run `./chemCLI` > `instance` > `all actions` to backup your data followed by an upgrade of the instance.
 
 > When upgrading from ELN version 1.3, please create a backup using chemCLI version 0.2.2 or above. This is because the data backup script provided inside the container is broken and this is fixed by chemCLI tool.
 
@@ -114,7 +114,7 @@ As long as you installed an instance of Chemotion using this tool, the upgrade p
 
 > :warning: be sure about what you want to do!
 
-You can uninstall everything created by chemCLI by running: `chemotion` > `advanced` > `uninstall`. Last you can simply delete the downloaded binary itself.
+You can uninstall everything created by chemCLI by running: `./chemCLI` > `advanced` > `uninstall`. Last you can simply delete the downloaded binary itself.
 
 ## Updating the Tool
 
@@ -133,16 +133,16 @@ If you are using chemCLI version 0.1 (then called `chemotion CLI`), please do th
 
 > Please note that support for version 0.1.x will be completely deprecated on 31.12.2023.
 
-## Advanced Usgae
+## Advanced Usage
 
 ### Using flags
 
 chemCLI has a lot to offer, with a few advanced features available exclusively via flags. Feel free to use `--help` option at the end of the command and its subcommands to explore more.
 
-A particular construct worth noting is using the `chemotion instance restore` command to create the **first** instance while restoring data from a previous instance into it. This can be useful for moving from non-docker and/or non-chemCLI based installations to a chemCLI managed installation.
+A particular construct worth noting is using the `./chemCLI instance restore` command to create the **first** instance while restoring data from a previous instance into it. This can be useful for moving from non-docker and/or non-chemCLI based installations to a chemCLI managed installation.
 
 ```bash
-./chemcli instance restore --name first-instance --data /absolute/path/to/backup.data.tar.gz --db /absolute/path/to/backup.sql.gz --address https://chemotion.myuni.de
+./chemCLI instance restore --name first-instance --data /absolute/path/to/backup.data.tar.gz --db /absolute/path/to/backup.sql.gz --address https://chemotion.myuni.de
 ```
 
 ### Silent and Debug Use
