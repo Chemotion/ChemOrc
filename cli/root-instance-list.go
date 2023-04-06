@@ -8,13 +8,13 @@ import (
 )
 
 func instanceList() {
-	if currentState.debug {
-		zboth.Debug().Msgf("Currently existing instances are :", strings.Join(allInstances(), " "))
+	allInstances := allInstances()
+	if conf.GetBool(joinKey(stateWord, "debug")) {
+		zboth.Debug().Msgf("Currently existing instances are :", strings.Join(allInstances, " "))
 	}
-	if !currentState.quiet {
-		confirmInstalled()
-		fmt.Printf("The following instances of %s exist:\n", nameCLI)
-		for _, inst := range allInstances() {
+	if isInteractive(false) {
+		fmt.Printf("The following instances of %s exist:\n", nameProject)
+		for _, inst := range allInstances {
 			fmt.Println(inst)
 		}
 	}
@@ -23,9 +23,8 @@ func instanceList() {
 var listInstanceRootCmd = &cobra.Command{
 	Use:   "list",
 	Args:  cobra.NoArgs,
-	Short: "Get a list of all instances of " + nameCLI,
-	Run: func(cmd *cobra.Command, args []string) {
-		logWhere()
+	Short: "Get a list of all instances of " + nameProject,
+	Run: func(_ *cobra.Command, _ []string) {
 		instanceList()
 	},
 }

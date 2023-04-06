@@ -7,6 +7,8 @@
 
 source /embed/lib/dbenv
 
+BACKUP_WHAT=${BACKUP_WHAT:-both}
+
 stamp=$(date +'%y%m%d-%H%M%S')
 
 if [[ $BACKUP_WHAT == "both" || $BACKUP_WHAT == "data" ]]; then
@@ -23,15 +25,18 @@ if [[ $BACKUP_WHAT == "both" || "$BACKUP_WHAT" = "db" ]]; then
     }
 fi
 
-if [[ ! -e "/backup/backup.data.tar.gz" && ! -e "/backup/backup.sql.gz" ]] || \
-   [[ -L "/backup/backup.data.tar.gz" && -L "/backup/backup.sql.gz" ]] ; then 
-    if [[ $BACKUP_WHAT == "both" || $BACKUP_WHAT == "data" ]]; then
-        log "Creating symlink to latest data backup."
+
+if [[ $BACKUP_WHAT == "both" || $BACKUP_WHAT == "data" ]]; then
+    if [[ ! -e "/backup/backup.data.tar.gz" || -L "/backup/backup.data.tar.gz" ]]; then
+        log "Creating symlink to latest data backup: /backup/backup.data.tar.gz -> backup-${stamp}.data.tar.gz"
         rm -f /backup/backup.data.tar.gz
         ln -s "backup-${stamp}.data.tar.gz" "/backup/backup.data.tar.gz"
     fi
-    if [[ $BACKUP_WHAT == "both" || "$BACKUP_WHAT" == "db" ]]; then
-        log "Creating symlink to latest database backup."
+fi
+
+if [[ $BACKUP_WHAT == "both" || $BACKUP_WHAT == "db" ]]; then
+    if [[ ! -e "/backup/backup.sql.gz" || -L "/backup/backup.sql.gz" ]]; then 
+        log "Creating symlink to latest db backup: /backup/backup.sql.gz -> backup-${stamp}.sql.gz"
         rm -f /backup/backup.sql.gz
         ln -s "backup-${stamp}.sql.gz" "/backup/backup.sql.gz"
     fi

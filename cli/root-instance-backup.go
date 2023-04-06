@@ -1,81 +1,91 @@
 package cli
 
 import (
-	"fmt"
+	"strings"
 
+	"github.com/chigopher/pathlib"
 	"github.com/spf13/cobra"
 )
 
-var (
-	_root_instance_backup_database_ bool
-	_root_instance_backup_data_     bool
-)
-
-func instanceBackup(givenName string) {
-	// deliver payload
-	//TODO: include version check before delivering payload
-	gotoFolder(givenName)
-	var err, msg, portion string
-	portion = "both"
-	if _root_instance_backup_database_ && !_root_instance_backup_data_ {
-		portion = "db"
-	}
-	if _root_instance_backup_data_ && !_root_instance_backup_database_ {
-		portion = "data"
-	}
-	status := instanceStatus(givenName)
-	if successStart := callVirtualizer("compose start eln"); successStart {
-		if successCurl := callVirtualizer("compose exec eln curl https://raw.githubusercontent.com/harivyasi/chemotion/chemotion-cli/chemotion-cli/payload/backup.sh --output /embed/scripts/backup.sh"); successCurl {
-			if successBackUp := callVirtualizer("compose exec --env BACKUP_WHAT=" + portion + " eln chemotion backup"); successBackUp {
-				zboth.Info().Msgf("Backup successful.")
-			} else {
-				msg = "Backup process failed."
-				err = "backup failed"
+func instanceBackup(givenName, portion string) {
+	calledCmd := toSprintf("--profile execution run --rm -e BACKUP_WHAT=%s executor chemotion backup", portion)
+	var backupFile pathlib.Path
+	if strings.HasSuffix(conf.GetString(joinKey(instancesWord, currentInstance, "image")), "eln-1.3.1p220712") {
+		backupFile = downloadFile(backupshURL, "temp.backup.sh")
+		var err error
+		var output string
+		var out []byte
+		commands := []string{"create --name backcon ptrxyz/chemotion:eln-1.3.1p220712", "cp temp.backup.sh backcon:/embed/scripts/backup.sh", "commit backcon ptrxyz/chemotion:eln-1.3.1p220712", "rm backcon"}
+		for _, comm := range commands {
+			out, err = execShell(toSprintf("%s %s", virtualizer, comm))
+			output = toSprintf("%s %s", output, out)
+			if err != nil {
+				zboth.Fatal().Err(err).Msgf("command failed: %s %s", virtualizer, comm)
 			}
-		} else {
-			err = "backup.sh update failed"
-			msg = "Could not fix the broken `backup.sh`. Can't create backup."
 		}
-		if status != "Up" { // if instance was not Up prior to start then stop it now
-			callVirtualizer("compose stop")
-		}
+		zboth.Debug().Msgf(output)
+		// calledCmd = toSprintf("--profile execution run --volume type=bind,source:%s/%s,target=/embed/scripts/backup.sh --rm -e BACKUP_WHAT=%s executor chemotion backup", backupDir, backupFile.Name(), portion)
+		backupFile.Remove()
+	}
+	if _, successBackUp, _ := gotoFolder(givenName), callVirtualizer(composeCall+calledCmd), gotoFolder("workdir"); successBackUp {
+		zboth.Info().Msgf("Backup successful.")
 	} else {
-		err = "starting eln service failed"
-		msg = "Could not backup unless it starts. Can't create backup."
+		zboth.Fatal().Err(toError("backup failed")).Msgf("Backup process failed.")
 	}
-	gotoFolder("workdir")
-	if err != "" {
-		zboth.Fatal().Err(fmt.Errorf(err)).Msgf(msg)
-	}
+
 }
 
 var backupInstanceRootCmd = &cobra.Command{
 	Use:   "backup",
-	Short: "Create a backup of the data associated to an instance of " + nameCLI,
+	Short: "Create a backup of the data associated to an instance of " + nameProject,
 	Args:  cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		logWhere()
-		confirmInstalled()
-		backup := true
-		if !currentState.quiet {
-			status := instanceStatus(currentState.name)
-			if status == "Up" {
-				backup = selectYesNo(fmt.Sprintf("The instance called %s is running. Backing up a running instance is not a good idea. Continue", currentState.name), false)
+	Run: func(cmd *cobra.Command, _ []string) {
+		backup, status := true, instanceStatus(currentInstance)
+		if status == "Up" {
+			zboth.Warn().Err(toError("instance running")).Msgf("The instance called %s is running. Backing up a running instance is not a good idea.", currentInstance)
+			if isInteractive(false) {
+				backup = selectYesNo("Continue", false)
 			}
-			if status == "Created" {
-				backup = selectYesNo(fmt.Sprintf("The instance called %s was created but never turned on. Backing up such an instance is not a good idea. Continue", currentState.name), false)
+		}
+		if status == "Created" {
+			zboth.Warn().Err(toError("instance never run")).Msgf("The instance called %s was created but never turned on. Backing up such an instance is not a good idea.", currentInstance)
+			if isInteractive(false) {
+				backup = selectYesNo("Continue", false)
 			}
 		}
 		if backup {
-			instanceBackup(currentState.name)
+			portion := "both"
+			if ownCall(cmd) {
+				if toBool(cmd.Flag("db").Value.String()) && !toBool(cmd.Flag("data").Value.String()) {
+					portion = "db"
+				}
+				if toBool(cmd.Flag("data").Value.String()) && !toBool(cmd.Flag("db").Value.String()) {
+					portion = "data"
+				}
+			} else {
+				if isInteractive(false) {
+					switch selectOpt([]string{"database and data", "database", "data", "exit"}, "What would you like to backup?") {
+					case "database and data":
+						portion = "both"
+					case "database":
+						portion = "db"
+					case "data":
+						portion = "data"
+					}
+				}
+			}
+			instanceBackup(currentInstance, portion)
+			if status != "Up" {
+				_, _, _ = gotoFolder(currentInstance), callVirtualizer(composeCall+"stop"), gotoFolder("workdir")
+			}
 		} else {
-			zlog.Debug().Msgf("Backup operation cancelled.")
+			zboth.Debug().Msgf("Backup operation cancelled.")
 		}
 	},
 }
 
 func init() {
-	backupInstanceRootCmd.Flags().BoolVar(&_root_instance_backup_database_, "db", false, "backup only database")
-	backupInstanceRootCmd.Flags().BoolVar(&_root_instance_backup_data_, "data", false, "backup only data")
+	backupInstanceRootCmd.Flags().Bool("db", false, "backup only database")
+	backupInstanceRootCmd.Flags().Bool("data", false, "backup only data")
 	instanceRootCmd.AddCommand(backupInstanceRootCmd)
 }

@@ -13,3 +13,16 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# default name for the executable
+chemCLI
+chemCLI.arm.x
+chemCLI.amd.x
+chemCLI.exe
+
+# all log files
+*.log
+
+# don't include the private configuration file and instances folder
+chem_cli.*
+instances/

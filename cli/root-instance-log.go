@@ -6,53 +6,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	_root_instance_log_all_            bool
-	_root_instance_log_service_        string
-	_root_instance_log_defaultService_ = "eln" // the service that is used as the default for printing log"
-	_root_instance_log_v_details_      bool
-	_root_instance_log_v_follow_       bool
-	_root_instance_log_v_timestamps_   bool
-	_root_instance_log_v_since_        string
-	_root_instance_log_v_until_        string
-	_root_instance_log_v_tail_         string
-)
-
-func instanceLog(givenName, service string) {
-	name, services := getInternalName(givenName), getServices(givenName)
-	var logOf []string
-	if _root_instance_log_all_ {
-		logOf = services
-	} else {
-		if elementInSlice(service, &services) > -1 {
-			logOf = []string{service}
-		} else {
-			zboth.Fatal().Err(fmt.Errorf("named service not found")).Msgf("No service called %s found associated with the instance called %s.", service, givenName)
-		}
-	}
-	for _, service := range logOf {
+func instanceLog(givenName, args string, logOf *[]string, follow bool) {
+	name := getInternalName(givenName)
+	for _, service := range *logOf {
 		zboth.Info().Msgf("Printing logs for the instance-service called %s-%s.", givenName, service)
-		args := fmt.Sprintf("--tail %s", _root_instance_log_v_tail_)
-		if _root_instance_log_v_details_ {
-			args += " --details"
-		}
-		if _root_instance_log_v_timestamps_ {
-			args += " --timestamps"
-		}
-		if _root_instance_log_v_since_ != "" {
-			args += fmt.Sprintf(" --since %s", _root_instance_log_v_until_)
-		}
-		if _root_instance_log_v_until_ != "" {
-			args += fmt.Sprintf(" --until %s", _root_instance_log_v_until_)
-		}
-		if _root_instance_log_v_follow_ {
-			if _root_instance_log_all_ {
-				zboth.Fatal().Err(fmt.Errorf("illegal operation")).Msgf("Cannot `follow` all the services. Use only one of the `--all` and `--follow` flags.")
-			}
+		if follow {
 			args += " --follow"
-			callVirtualizer(fmt.Sprintf("logs %s %s-%s-%d", args, name, service, rollNum))
+			callVirtualizer(toSprintf("logs %s %s-%s-%d", args, name, service, rollNum))
 		} else {
-			if res, err := execShell(fmt.Sprintf("%s logs %s %s-%s-%d", toLower(virtualizer), args, name, service, rollNum)); err == nil {
+			if res, err := execShell(toSprintf("%s logs %s %s-%s-%d", virtualizer, args, name, service, rollNum)); err == nil {
 				if n, errPrint := fmt.Println(string(res)); errPrint == nil {
 					zboth.Debug().Msgf("Printed logs to screen that were %d lines long", n)
 				} else {
@@ -70,30 +32,65 @@ var logInstanceRootCmd = &cobra.Command{
 	Aliases: []string{"logs"},
 	Args:    cobra.NoArgs,
 	Short:   "Get logs of an instance of " + nameCLI,
-	Run: func(cmd *cobra.Command, args []string) {
-		logWhere()
-		confirmInstalled()
-		if currentState.quiet {
-			zboth.Warn().Err(fmt.Errorf("illegal operation")).Msgf("Logs can't be printed in quiet mode.")
-		} else {
-			if _root_instance_log_service_ == "" {
-				zboth.Info().Msgf("No service specified, printing logs for all services.")
-				_root_instance_log_all_ = true
+	Run: func(cmd *cobra.Command, _ []string) {
+		if isInteractive(false) {
+			var services, logOf []string = getServices(currentInstance), []string{}
+			var (
+				args   string
+				follow bool
+			)
+			if ownCall(cmd) {
+				logOf = []string{toLower(cmd.Flag("service").Value.String())}
+				if cmd.Flag("all").Changed && toBool(cmd.Flag("all").Value.String()) {
+					logOf = services
+				} else {
+					if cmd.Flag("service").Changed {
+						if cmd.Flag("all").Changed {
+							zboth.Warn().Msgf("You used the `--service` and `--all` flags. Ignoring the `--service` flag.")
+						}
+						if elementInSlice(logOf[0], &services) == -1 {
+							zboth.Fatal().Err(toError("service not found")).Msgf("No service called %s found associated with the instance called %s.", logOf[0], currentInstance)
+						}
+					} else {
+						logOf = []string{selectOpt(services, "Please select the service whose logs you want")}
+					}
+				}
+				args := toSprintf("--tail %s", cmd.Flag("tail").Value.String())
+				if toBool(cmd.Flag("details").Value.String()) {
+					args += " --details"
+				}
+				if toBool(cmd.Flag("timestamps").Value.String()) {
+					args += " --timestamps"
+				}
+				if cmd.Flag("since").Changed {
+					args += toSprintf(" --since %s", cmd.Flag("since").Value.String())
+				}
+				if cmd.Flag("until").Changed {
+					args += toSprintf(" --until %s", cmd.Flag("until").Value.String())
+				}
+				follow = toBool(cmd.Flag("follow").Value.String())
+				if !cmd.Flag("all").Changed && args == "--tail all" && !cmd.Flag("service").Changed {
+					zboth.Info().Msgf("This command can be used with a number of flags. Check them with the `--help` option.")
+				}
+			} else {
+				zboth.Info().Msgf("This command can be used as with a number of flags. Check `%s %s --help` for more.", commandForCLI, "instance logs")
+				logOf = []string{selectOpt(services, "Please select the service whose logs you want")}
 			}
-			_root_instance_log_service_ = toLower(_root_instance_log_service_)
-			instanceLog(currentState.name, _root_instance_log_service_)
+			instanceLog(currentInstance, args, &logOf, follow)
+		} else {
+			zboth.Fatal().Err(toError("illegal operation")).Msgf("Logs can't be printed in quiet mode.")
 		}
 	},
 }
 
 func init() {
 	instanceRootCmd.AddCommand(logInstanceRootCmd)
-	logInstanceRootCmd.Flags().StringVar(&_root_instance_log_service_, "service", _root_instance_log_defaultService_, "show the log of a given service")
-	logInstanceRootCmd.Flags().BoolVar(&_root_instance_log_all_, "all", false, "show the logs of all services")
-	logInstanceRootCmd.Flags().BoolVar(&_root_instance_log_v_details_, "details", false, fmt.Sprintf("--details flag as received by %s logs command", virtualizer))
-	logInstanceRootCmd.Flags().BoolVar(&_root_instance_log_v_follow_, "follow", false, fmt.Sprintf("--follow flag as received by %s logs command", virtualizer))
-	logInstanceRootCmd.Flags().BoolVarP(&_root_instance_log_v_timestamps_, "timestamps", "t", false, fmt.Sprintf("--timestamps flag as received by %s logs command", virtualizer))
-	logInstanceRootCmd.Flags().StringVar(&_root_instance_log_v_since_, "since", "", fmt.Sprintf("--since flag as received by %s logs command", virtualizer))
-	logInstanceRootCmd.Flags().StringVar(&_root_instance_log_v_until_, "until", "", fmt.Sprintf("--until flag as received by %s logs command", virtualizer))
-	logInstanceRootCmd.Flags().StringVarP(&_root_instance_log_v_tail_, "tail", "n", "all", fmt.Sprintf("--tail flag as received by %s logs command", virtualizer))
+	logInstanceRootCmd.Flags().String("service", primaryService, "show the log of a given service")
+	logInstanceRootCmd.Flags().Bool("all", false, "show the logs of all services")
+	logInstanceRootCmd.Flags().Bool("details", false, toSprintf("--details flag as received by %s logs command", virtualizer))
+	logInstanceRootCmd.Flags().Bool("follow", false, toSprintf("--follow flag as received by %s logs command", virtualizer))
+	logInstanceRootCmd.Flags().BoolP("timestamps", "t", false, toSprintf("--timestamps flag as received by %s logs command", virtualizer))
+	logInstanceRootCmd.Flags().String("since", "", toSprintf("--since flag as received by %s logs command", virtualizer))
+	logInstanceRootCmd.Flags().String("until", "", toSprintf("--until flag as received by %s logs command", virtualizer))
+	logInstanceRootCmd.Flags().StringP("tail", "n", "all", toSprintf("--tail flag as received by %s logs command", virtualizer))
 }

@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"fmt"
 	"net/url"
 	"os"
 	"strconv"
@@ -12,28 +11,23 @@ import (
 	"github.com/spf13/viper"
 )
 
-var (
-	_root_instance_new_name_        string
-	_root_instance_new_use_         string
-	_root_instance_new_development_ bool
-	_root_instance_new_address_     string
-	_root_instance_new_env_         string
-)
-
-// helper function to get a compose file
-func getCompose(use string) (compose viper.Viper) {
+// helper to get a compose (or YAML) file
+func parseCompose(use string) (compose viper.Viper) {
 	var (
 		composeFilepath pathlib.Path
 		isUrl           bool
 	)
-	// TODO: check on the version of the compose file
 	if existingFile(use) {
 		composeFilepath = *pathlib.NewPath(use)
 	} else if _, err := url.ParseRequestURI(use); err == nil {
 		isUrl = true
-		composeFilepath = downloadFile(use, workDir.String()) // downloads to the working directory
+		composeFilepath = downloadFile(use, pathlib.NewPath(".").Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename)).String()) // downloads to where-ever it is called from
 	} else {
-		zboth.Fatal().Err(err).Msgf("Failed to parse the URL/file: %s.", use)
+		if isUrl {
+			zboth.Fatal().Err(err).Msgf("Failed to download the file from URL: %s.", use)
+		} else {
+			zboth.Fatal().Err(err).Msgf("Failed %s for compose not found.", use)
+		}
 	}
 	// parse the compose file
 	compose = *viper.New()
@@ -43,107 +37,100 @@ func getCompose(use string) (compose viper.Viper) {
 		composeFilepath.Remove()
 	}
 	if err != nil {
-		zboth.Fatal().Err(err).Msgf("Invalid formatting for a compose file.")
+		zboth.Fatal().Err(err).Msgf("Failed to read the file: %s", compose.ConfigFileUsed())
 	}
 	return
 }
 
-// set unique labels and volume names in the compose file
-func setUniqueLabels(compose *viper.Viper, name string) {
-	sections := []string{"services", "volumes", "networks"}
-	for _, section := range sections {
-		subheadings := getSubHeadings(compose, section) // subheadings are the names of the services, volumes and networks
-		for _, k := range subheadings {
-			compose.Set(joinKey(section, k, "labels"), map[string]string{"net.chemotion.cli.project": name})
-		}
-	}
-	// set unique name for volumes in the compose file
-	volumes := getSubHeadings(compose, "volumes")
-	for _, volume := range volumes {
-		n := compose.GetString(joinKey("volumes", volume, "name"))
-		compose.Set(joinKey("volumes", volume, "name"), name+"_"+n)
-
-	}
-}
-
-// helper function to get a fresh (unassigned port)
-func getFreshPort(kind string) (port int) {
-	if firstRun {
+// helper to get a fresh (unassigned port)
+func getFreshPort(kind string) (port uint64) {
+	existingPorts := allPorts()
+	if len(existingPorts) == 0 {
 		port = firstPort
 	} else {
-		existingPorts := allPorts()
 		if kind == "Production" {
-			for i := firstPort + 100; i <= maxInstancesOfKind+(firstPort+100); i++ {
+			for i := firstPort + 101; i <= maxInstancesOfKind+(firstPort+101); i++ {
 				if elementInSlice(i, &existingPorts) == -1 {
 					port = i
 					break
 				}
 			}
 		} else if kind == "Development" {
-			for i := firstPort + 200; i <= maxInstancesOfKind+(firstPort+200); i++ {
+			for i := firstPort + 201; i <= maxInstancesOfKind+(firstPort+201); i++ {
 				if elementInSlice(i, &existingPorts) == -1 {
 					port = i
 					break
 				}
 			}
 		}
-		if port == (firstPort+100)+maxInstancesOfKind || port == (firstPort+200)+maxInstancesOfKind {
-			zboth.Fatal().Err(fmt.Errorf("max instances")).Msgf("A maximum of %d instances of %s are allowed. Please contact us if you hit this limit.", maxInstancesOfKind, nameCLI)
+		if port == (firstPort+101)+maxInstancesOfKind || port == (firstPort+201)+maxInstancesOfKind {
+			zboth.Fatal().Err(toError("max instances")).Msgf("A maximum of %d instances of %s are allowed. Please contact us if you hit this limit.", maxInstancesOfKind, nameProject)
 		}
 	}
 	return
 }
 
-func instanceCreate(givenName string, use string, kind string, givenAddress string) (success bool) {
-	if err := newInstanceValidate(givenName); err != nil {
-		zboth.Fatal().Err(err).Msgf("Given instance name is invalid because %s.", err.Error())
-	}
-	var (
-		port     int
-		protocol string
-		address  string
-		env      *viper.Viper
-	)
-	env = viper.New()
-	env.SetConfigType("env")
-	if _root_instance_new_env_ != "" {
-		env.SetConfigFile(_root_instance_new_env_)
-		if err := env.ReadInConfig(); err != nil {
-			zboth.Fatal().Err(err).Msgf("Failed to parse the supplied .env file.")
-		}
-		if env.InConfig("URL_PROTOCOL") && env.InConfig("URL_HOST") {
-			if givenAddress == addressDefault {
-				givenAddress = env.GetString("URL_PROTOCOL") + "://" + env.GetString("URL_HOST")
-			} else {
-				zboth.Warn().Msgf("It seems you have `address` set in .env file as well as via the --address flag. The value in the given .env file will be overwritten.")
-			}
-		}
-	}
-	protocol, address, port = splitAddress(givenAddress)
-	if address != "localhost" && (protocol == "http" && port == 443) || (protocol == "https" && port == 80) {
-		zboth.Warn().Err(fmt.Errorf("port mismatch")).Msgf("You have chosen port %d for protocol %s. This is generally a very bad idea.", port, protocol)
-		if !currentState.quiet {
-			if !selectYesNo("Continue still", false) {
-				zboth.Info().Msgf("Operation cancelled")
-				os.Exit(2)
-			}
+// to create a development instance
+func instanceCreateDevelopment(details map[string]string) (success bool) {
+	zboth.Fatal().Err(toError("not implemented")).Msgf("This feature - development instances of chemotion - is currently under development.")
+	return false
+}
+
+func createExtendedCompose(details map[string]string, use string) (extendedCompose viper.Viper) {
+	name := details["name"]
+	extendedCompose = *viper.New()
+	compose := parseCompose(use)
+	extendedCompose.Set("name", name) // set project name for the virtulizer
+	// create an additional service to run commands
+	extendedCompose.Set(joinKey("services", "executor", "image"), compose.GetString(joinKey("services", primaryService, "image")))
+	extendedCompose.Set(joinKey("services", "executor", "volumes"), compose.GetStringSlice(joinKey("services", primaryService, "volumes")))
+	extendedCompose.Set(joinKey("services", "executor", "environment"), []string{toSprintf("CONFIG_ROLE=%s", primaryService)})
+	extendedCompose.Set(joinKey("services", "executor", "depends_on"), []string{"db"})
+	extendedCompose.Set(joinKey("services", "executor", "networks"), []string{"chemotion"})
+	extendedCompose.Set(joinKey("services", "executor", "profiles"), []string{"execution"})
+	// set labels on services, volumes and networks for future identification
+	sections := []string{"services", "volumes", "networks"}
+	for _, section := range sections {
+		subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services, volumes and networks
+		for _, k := range subheadings {
+			extendedCompose.Set(joinKey(section, k, "labels"), map[string]string{"net.chemotion.cli.project": name})
 		}
 	}
-	if port == -1 { // i.e. a port was not suggested by the user
-		if address == "localhost" {
-			port = getFreshPort(kind)
-			givenAddress += ":" + strconv.Itoa(port)
+	// set unique name for volumes in the compose file
+	volumes := getSubHeadings(&compose, "volumes")
+	for _, volume := range volumes {
+		n := compose.GetString(joinKey("volumes", volume, "name"))
+		if n == "" && volume == "spectra" {
+			n = "chemotion_spectra"
+		} // because the spectra volume has no name
+		if strings.HasPrefix(n, name) { // for compatibility with upgradeThisTool("0.1_to_0.2")
+			extendedCompose.Set(joinKey("volumes", volume, "name"), n)
 		} else {
-			if protocol == "http" {
-				port = 80
-			} else {
-				port = 443
-			}
+			extendedCompose.Set(joinKey("volumes", volume, "name"), name+"_"+n)
+		}
+	}
+	key := getNewUniqueID() + getNewUniqueID() + getNewUniqueID()
+	for _, service := range []string{"worker", "eln", "executor"} {
+		extendedCompose.Set(toSprintf("services.%s.environment", service), []string{"PUBLIC_URL=" + details["accessAddress"], "SECRET_KEY_BASE=" + key})
+	}
+	if extendedCompose.IsSet("services.converter") {
+		extendedCompose.Set("services.converter.environment", []string{"SECRET_KEY=" + getNewUniqueID() + getNewUniqueID() + getNewUniqueID()})
+	}
+	return
+}
+
+func instanceCreateProduction(details map[string]string) (success bool) {
+	pro, add, port := splitAddress(details["accessAddress"])
+	details["protocol"], details["address"] = pro, add
+	if port == 0 {
+		port = getFreshPort(details["kind"])
+		if details["address"] == "localhost" {
+			details["accessAddress"] += toSprintf(":%d", port)
 		}
 	} else {
-		if address == "localhost" {
-			zboth.Warn().Err(fmt.Errorf("localhost && port suggested")).Msgf("You suggested a port while running on localhost. We strongly recommend that you use the default schema i.e. do not assign a specific port.")
-			if !currentState.quiet {
+		if details["address"] == "localhost" {
+			zboth.Warn().Err(toError("localhost && port suggested")).Msgf("You suggested a port while running on localhost. We strongly recommend that you use the default schema i.e. do not assign a specific port.")
+			if isInteractive(false) {
 				if !selectYesNo("Continue still", false) {
 					zboth.Info().Msgf("Operation cancelled")
 					os.Exit(2)
@@ -151,108 +138,141 @@ func instanceCreate(givenName string, use string, kind string, givenAddress stri
 			}
 		}
 	}
-	// create new unique name for the instance
-	name := fmt.Sprintf("%s-%s", givenName, getNewUniqueID())
+	details["port"] = strconv.FormatUint(port, 10)
+	// download and modify the compose file
+	var composeFile pathlib.Path
+	if existingFile(details["use"]) {
+		dest := workDir.Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename))
+		if err := copyfile(details["use"], dest.String()); err == nil {
+			composeFile = *dest
+		} else {
+			zboth.Fatal().Err(err).Msgf("Failed to copy the suggested compose file: %s. This is necessary for future use.")
+		}
+	} else {
+		composeFile = downloadFile(details["use"], workDir.Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename)).String())
+	}
+	if err := changeKey(composeFile.String(), joinKey("services", "eln", "ports[0]"), toSprintf("%s:4000", details["port"])); err != nil {
+		zboth.Fatal().Err(err).Msgf("Failed to update the downloaded compose file. This is necessary for future use.")
+	}
+	extendedCompose := createExtendedCompose(details, composeFile.String())
 	// store values in the conf, the conf file is modified only later
-	if firstRun {
-		conf.SetConfigFile(workDir.Join(defaultConfigFilepath).String())
-		conf.Set("version", versionYAML)
-		conf.Set(selector_key, givenName)
+	conf.Set(joinKey(instancesWord, details["givenName"], "port"), port)
+	for _, key := range []string{"name", "kind", "accessAddress"} {
+		conf.Set(joinKey(instancesWord, details["givenName"], key), details[key])
 	}
-	conf.Set(joinKey("instances", givenName, "name"), name)
-	conf.Set(joinKey("instances", givenName, "kind"), kind)
-	conf.Set(joinKey("instances", givenName, "quiet"), false)
-	conf.Set(joinKey("instances", givenName, "debug"), kind == "Development")
-	conf.Set(joinKey("instances", givenName, "protocol"), protocol)
-	conf.Set(joinKey("instances", givenName, "address"), address)
-	conf.Set(joinKey("instances", givenName, "port"), port)
-	// get the compose file for the instance
-	compose := getCompose(use)
-	// for some reason (no idea why), labels must be set before port
-	setUniqueLabels(&compose, name)
-	// set the port in the compose file
-	compose.Set(joinKey("services", "eln", "ports"), []string{fmt.Sprintf("%d:4000", port)})
-	zboth.Info().Msgf("Creating a new instance of %s called %s.", nameCLI, name)
-	// make folder
-	if err := workDir.Join(instancesFolder, name).MkdirAll(); err != nil {
-		zboth.Fatal().Err(err).Msgf("Unable to create folder to store instances of %s.", nameCLI)
-	}
-	if _, err, _ := gotoFolder(givenName), compose.WriteConfigAs(defaultComposeFilename), gotoFolder("workdir"); err == nil {
-		zboth.Info().Msgf("Written compose file %s in the above step.", compose.ConfigFileUsed())
-		commandStr := fmt.Sprintf("compose -f %s up --no-start", defaultComposeFilename)
-		zboth.Info().Msgf("Starting %s with command: %s", virtualizer, commandStr)
-		if _, worked, _ := gotoFolder(givenName), callVirtualizer(commandStr), gotoFolder("workdir"); !worked {
-			success = worked
-			zboth.Fatal().Err(fmt.Errorf("%s failed", commandStr)).Msgf("Failed to setup %s. Check log. ABORT!", nameCLI)
-		}
+	// make folder and move the compose file into it
+	zboth.Info().Msgf("Creating a new instance of %s called %s.", nameCLI, details["name"])
+	if err := workDir.Join(instancesWord, details["name"]).MkdirAll(); err == nil {
+		composeFile.Rename(workDir.Join(instancesWord, details["name"], chemotionComposeFilename))
 	} else {
-		success = false
-		zboth.Fatal().Err(err).Msgf("Failed to write the compose file to its repective folder. This is necessary for future use.")
+		zboth.Fatal().Err(err).Msgf("Unable to create folder to store instances of %s.", nameProject)
 	}
-	// write env file into the container
-	envFile := workDir.Join(instancesFolder, name, ".env")
-	env.SetConfigFile(envFile.String())
-	env.Set("URL_HOST", strings.TrimPrefix(givenAddress, protocol+"://"))
-	env.Set("URL_PROTOCOL", protocol)
-	if err := env.WriteConfig(); err == nil {
-		modifyContainer(givenName, []string{"mkdir -p", "shared/pullin"})
-		if worked := modifyContainer(givenName, []string{"cp", ".env", "shared/pullin"}); !worked {
-			success = worked
-			zboth.Warn().Msgf("Failed to write .env file in `%s/shared/pullin`", name)
-		}
+	// write out the extended compose file
+	if _, err, _ := gotoFolder(details["givenName"]), extendedCompose.WriteConfigAs(cliComposeFilename), gotoFolder("workdir"); err == nil {
+		zboth.Info().Msgf("Written compose files %s and %s in the above steps.", chemotionComposeFilename, cliComposeFilename)
 	} else {
-		zboth.Warn().Err(err).Msgf("Failed to write .env file")
+		zboth.Fatal().Err(err).Msgf("Failed to write the extended compose file to its repective folder. This is necessary for future use.")
 	}
-	envFile.Remove()
-	zboth.Info().Msgf("Successfully created the container called . New %s port available at %d.", nameCLI, port)
-	// now modify the config file
-	if err := conf.WriteConfig(); err == nil {
-		zboth.Info().Msgf("Written config file: %s.", conf.ConfigFileUsed())
-	} else {
-		zboth.Fatal().Err(err).Msg("Failed to write config file. Check log. ABORT!")
+	if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(composeCall+"up --no-start"), gotoFolder("workdir"); !success {
+		zboth.Fatal().Err(toError("compose up failed")).Msgf("Failed to setup an instance of %s. Check log. ABORT!", nameProject)
+	}
+	var firstRun bool
+	if !existingFile(conf.ConfigFileUsed()) && currentInstance == "" {
+		firstRun = true
+		currentInstance = details["givenName"]
+	}
+	compose := viper.New()
+	compose.SetConfigFile(composeFile.String())
+	compose.ReadInConfig()
+	conf.Set(joinKey(instancesWord, details["givenName"], "image"), compose.GetString(joinKey("services", "eln", "image")))
+	if err := writeConfig(firstRun); err != nil {
+		zboth.Fatal().Err(err).Msg("Failed to write config file. Check log. ABORT!") // we want a fatal error in this case, `rewriteConfig()` does a Warn error
 	}
 	return success
 }
 
-func newInstanceInteraction() (create bool) {
-	create = selectYesNo("Installation process may download containers (of multiple GBs) and can take some time. Continue", true)
-	if create {
-		if _root_instance_new_name_ == instanceDefault { // i.e user has not changed it by passing an argument
-			_root_instance_new_name_ = getString("Please enter the name of the instance you want to create", newInstanceValidate)
+// interaction when creating a new instance
+func processInstanceCreateCmd(cmd *cobra.Command, details map[string]string) (create bool) {
+	askName, askAddress, askDevelopment := true, true, false
+	create = true
+	details["accessAddress"] = addressDefault
+	details["kind"] = "Production"
+	details["use"] = composeURL
+	if ownCall(cmd) {
+		if cmd.Flag("name").Changed {
+			details["givenName"] = cmd.Flag("name").Value.String()
+			if err := newInstanceValidate(details["givenName"]); err != nil {
+				zboth.Fatal().Err(err).Msgf("Cannot create new instance with name %s: %s", details["givenName"], err.Error())
+			}
+			askName = false
+		} else {
+			if !isInteractive(false) {
+				zboth.Fatal().Err(toError("specify instance name")).Msgf("Instance must be specified using `-n` flag when in quiet mode.")
+			}
 		}
-		if _root_instance_new_env_ == "" && _root_instance_new_address_ == addressDefault && selectYesNo("Is this instance running on a web-server?", false) { // i.e user has not changed it by passing an argument
-			_root_instance_new_address_ = getString("Please enter the web-address e.g. https://chemotion.uni.de:125", addressValidate)
+		if cmd.Flag("address").Changed {
+			details["accessAddress"] = cmd.Flag("address").Value.String()
+			if err := addressValidate(details["accessAddress"]); err != nil {
+				zboth.Fatal().Err(err).Msgf("Cannot accept the address %s: %s", details["accessAddress"], err.Error())
+			}
+			askAddress = false
 		}
-	} else {
-		zboth.Info().Msgf("Installation cancelled.")
+		if cmd.Flag("use").Changed {
+			details["use"] = cmd.Flag("use").Value.String()
+		}
+		if cmd.Flag("development") == nil {
+			askDevelopment = false
+		} else if toBool(cmd.Flag("development").Value.String()) {
+			details["kind"] = "Development"
+		} else {
+			askDevelopment = true
+		}
 	}
-	return
-}
-
-// command to install a new container of Chemotion
-var newInstanceRootCmd = &cobra.Command{
-	Use:   "new",
-	Args:  cobra.NoArgs,
-	Short: "Create a new instance of " + nameCLI,
-	Run: func(cmd *cobra.Command, args []string) {
-		logWhere()
-		confirmInstalled()
-		create := true
-		kind := "Production"
-		if _root_instance_new_development_ {
-			kind = "Development"
-		}
-		if !currentState.quiet {
-			confirmInteractive()
-			create = newInstanceInteraction()
-			if create && !_root_instance_new_development_ { // i.e. the flag was not set
-				fmt.Println("What kind of instance do you want?")
-				kind = selectOpt([]string{"Production", "Development"})
+	if isInteractive(false) {
+		if !ownCall(cmd) { // don't ask if the command is run directly i.e. without the menu
+			{
+				create = selectYesNo("Installation process may download containers (of multiple GBs) and can take some time. Continue", true)
 			}
 		}
 		if create {
-			if success := instanceCreate(_root_instance_new_name_, _root_instance_new_use_, kind, _root_instance_new_address_); success {
-				zboth.Info().Msg("Successfully created the new instance")
+			if askName {
+				details["givenName"] = getString("Please enter the name of the instance you want to create", newInstanceValidate)
+			}
+			if askAddress {
+				if selectYesNo("Is this instance having its own web-address (e.g. https://chemotion.uni.de or http://chemotion.uni.de:4100)?", false) {
+					details["accessAddress"] = getString("Please enter the web-address", addressValidate)
+				}
+			}
+			if askDevelopment {
+				if !selectYesNo("Do you want a Production instance", true) {
+					details["kind"] = "Development"
+				}
+			}
+		}
+	}
+	// create new unique name for the instance
+	details["name"] = toSprintf("%s-%s", details["givenName"], getNewUniqueID())
+	return
+}
+
+// command to install a new instance of Chemotion
+var newInstanceRootCmd = &cobra.Command{
+	Use:   "new",
+	Args:  cobra.NoArgs,
+	Short: "Create a new instance of " + nameProject,
+	Run: func(cmd *cobra.Command, _ []string) {
+		details := make(map[string]string)
+		create := processInstanceCreateCmd(cmd, details)
+		if create {
+			switch details["kind"] {
+			case "Production":
+				if success := instanceCreateProduction(details); success {
+					zboth.Info().Msgf("Successfully created a new production instance. Once switched on, it can be found at: %s", details["accessAddress"])
+				}
+			case "Development":
+				if success := instanceCreateDevelopment(details); success {
+					zboth.Info().Msgf("Successfully created a new development instance.")
+				}
 			}
 		}
 	},
@@ -260,9 +280,8 @@ var newInstanceRootCmd = &cobra.Command{
 
 func init() {
 	instanceRootCmd.AddCommand(newInstanceRootCmd)
-	newInstanceRootCmd.Flags().StringVar(&_root_instance_new_name_, "name", instanceDefault, "Name for the new instance")
-	newInstanceRootCmd.Flags().StringVar(&_root_instance_new_use_, "use", composeURL, "URL or filepath of the compose file to use for creating the instance")
-	newInstanceRootCmd.Flags().StringVar(&_root_instance_new_address_, "address", addressDefault, "Web-address (or hostname) for accessing the instance")
-	newInstanceRootCmd.Flags().StringVar(&_root_instance_new_env_, "env", "", ".env file for the new instance")
-	newInstanceRootCmd.Flags().BoolVar(&_root_instance_new_development_, "development", false, "Create a development instance")
+	newInstanceRootCmd.Flags().StringP("name", "n", "must.be.given", "Name for the new instance")
+	newInstanceRootCmd.Flags().String("use", composeURL, "URL or filepath of the compose file to use for creating the instance")
+	newInstanceRootCmd.Flags().String("address", addressDefault, "Web-address (or hostname) for accessing the instance")
+	newInstanceRootCmd.Flags().Bool("development", false, "Create a development instance")
 }
