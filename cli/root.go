@@ -44,7 +44,7 @@ import (
 const (
 	nameProject                     = "Chemotion ELN"
 	nameCLI                         = "chemCLI"
-	versionCLI                      = "0.2.2"
+	versionCLI                      = "0.2.3"
 	versionConfig                   = "2.0"
 	logFilename                     = "chem_cli.log"
 	defaultConfigFilepath           = "chem_cli.yml"
