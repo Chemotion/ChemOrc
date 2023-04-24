@@ -131,6 +131,44 @@ func handleCreateUserLogic() {
 	}
 }
 
+func handleDeleteUserLogic() {
+	containerID := getContainerID(currentInstance, "eln")
+	sourcePath := "./payload/deleteUser.sh"
+	destinationPath := "/embed/scripts"
+	scriptPath := destinationPath + "/deleteUser.sh"
+
+	cmd := exec.Command("docker", "cp", sourcePath, fmt.Sprintf("%s:%s", containerID, destinationPath))
+	err := cmd.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Set the file permissions to executable
+	cmd = exec.Command("docker", "exec", containerID, "chmod", "+x", scriptPath)
+	err = cmd.Run()
+	if err != nil {
+		zboth.Fatal().Err(err).Msgf("Failed to assign proper rights to the script file %s ", scriptPath)
+	}
+
+	// prompt user to input required params
+	var email string
+
+	print(Red + "WARNING! User will be deleted permanently" + Reset)
+	fmt.Print(Yellow + "\nPlease enter an Email Address of a USER you wish to delete: " + Reset)
+
+	fmt.Scanln(&email)
+
+	// Execute script inside docker container
+	cmd = exec.Command("docker", "exec", containerID, "/bin/bash", "-c", scriptPath+" "+email)
+	stdOutStderr, err := cmd.Output()
+
+	if err != nil {
+		zboth.Fatal().Err(err).Msgf("Failed to execute script file %s ", scriptPath)
+	}
+
+	fmt.Println(strings.Split(string(stdOutStderr), "\n"))
+}
+
 // create a new user of type Admin, Person and Device (for now only type:Person is supported)
 var createUserManagementInstanceRootCmd = &cobra.Command{
 	Use:     "create",
@@ -139,10 +177,12 @@ var createUserManagementInstanceRootCmd = &cobra.Command{
 	Short:   "Manage user actions such as create, add, update and remove user and reset password for " + nameCLI,
 	Run: func(cmd *cobra.Command, args []string) {
 		if ownCall(cmd) {
+			fmt.Println("asd")
 			handleCreateUserLogic()
 
 		} else {
 			handleCreateUserLogic()
+			fmt.Println("asd")
 		}
 	},
 }
@@ -172,11 +212,9 @@ var deleteUserManagementInstanceRootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		// Handle delete user logic here
 		if ownCall(cmd) {
-			fmt.Println("triggered by own call")
-			fmt.Println("handleDeleteUserLogic()")
+			handleDeleteUserLogic()
 		} else {
-			fmt.Println("triggered via cli menu")
-			fmt.Println("handleDeleteUserLogic()")
+			handleDeleteUserLogic()
 		}
 	},
 }
