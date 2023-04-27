@@ -152,7 +152,7 @@ func instanceCreateProduction(details map[string]string) (success bool) {
 		composeFile = downloadFile(details["use"], workDir.Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename)).String())
 	}
 	if port != firstPort {
-		if err := changeKey(composeFile.String(), joinKey("services", "eln", "ports[0]"), toSprintf("%s:%d", firstPort, details["port"])); err != nil {
+		if err := changeKey(composeFile.String(), joinKey("services", "eln", "ports[0]"), toSprintf("%d:%s", firstPort, details["port"])); err != nil {
 			composeFile.Remove()
 			zboth.Fatal().Err(err).Msgf("Failed to update the downloaded compose file. This is necessary for future use.")
 		}
