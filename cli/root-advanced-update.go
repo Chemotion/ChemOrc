@@ -24,12 +24,16 @@ func selfUpdate(version string) {
 		if errNew := newVersion.RenameStr(cliFileName); errNew == nil {
 			zboth.Info().Msgf("Successfully downloaded the new version. Old version is available as %s and is safe to remove.", oldVersion.Name())
 			conf.Set(joinKey(stateWord, "version"), version)
-			if err := writeConfig(false); err != nil {
-				zboth.Warn().Err(err).Msgf("Failed to rewrite config file. You will also need to update the %s.version to %s in the %s file manually.", stateWord, version, conf.ConfigFileUsed())
+			if existingFile(conf.ConfigFileUsed()) {
+				if err := writeConfig(false); err != nil {
+					zboth.Warn().Err(err).Msgf("Failed to rewrite config file. You will also need to update the %s.version to %s in the %s file manually.", stateWord, version, conf.ConfigFileUsed())
+				}
 			}
 		} else {
 			zboth.Warn().Err(errNew).Msgf("Successfully downloaded the new version. Please rename it to %s for further use. The old version is available as %s and is safe to remove.", cliFileName, oldVersion.Name())
-			zboth.Info().Msgf("You will also need to update the %s.version to %s in the %s file manually.", stateWord, version, conf.ConfigFileUsed())
+			if existingFile(conf.ConfigFileUsed()) {
+				zboth.Info().Msgf("You will also need to update the %s.version to %s in the %s file manually.", stateWord, version, conf.ConfigFileUsed())
+			}
 		}
 	} else {
 		zboth.Warn().Err(errOld).Msgf("Successfully downloaded the new version but failed to rename the old one. The new version is called %s, please rename it %s. The old version is safe to remove.", newVersion.Name(), cliFileName)
@@ -60,26 +64,30 @@ func getLatestVersion() (version string) {
 }
 
 // check if an update is required; store time of check in the config file if it exists
-func updateRequired() (required bool) {
+func updateRequired(check bool) (required bool) {
 	verKey, timeKey := joinKey(stateWord, "version"), joinKey(stateWord, "version_checked_on")
-	if conf.IsSet(verKey) {
-		checkedOn := conf.GetTime(timeKey)
-		if checkedOn.IsZero() {
-			checkedOn = time.Now().Add(time.Duration(-48) * time.Hour) // set checkedOn to 2 days in past
-		}
-		// check against version in file
-		if versionCLI == conf.GetString(verKey) {
-			if time.Since(checkedOn).Hours() > 24 { // check every 24 hours
-				existingVer, _ := vercompare.NewVersion(conf.GetString(verKey))
-				newVer, _ := vercompare.NewVersion(getLatestVersion())
-				required = newVer.GreaterThan(existingVer)
-				conf.Set(timeKey, time.Now())
-				if existingFile(conf.ConfigFileUsed()) {
-					writeConfig(false)
+	if !check {
+		if conf.IsSet(verKey) {
+			if versionCLI != conf.GetString(verKey) {
+				zboth.Warn().Msgf("%s version wrong in %s, be sure of what you are doing!", nameCLI, conf.ConfigFileUsed())
+			}
+			checkedOn := conf.GetTime(timeKey)
+			if checkedOn.IsZero() { // in case this not set
+				check = true
+			} else {
+				if time.Since(checkedOn).Hours() > 24 { // check every 24 hours
+					check = true
 				}
 			}
-		} else {
-			zboth.Fatal().Msgf("%s version wrong in %s, stopping as a safety measure!", nameCLI, conf.ConfigFileUsed())
+		}
+	}
+	if check {
+		existingVer, _ := vercompare.NewVersion(versionCLI)
+		newVer, _ := vercompare.NewVersion(getLatestVersion())
+		required = newVer.GreaterThan(existingVer)
+		conf.Set(timeKey, time.Now())
+		if existingFile(conf.ConfigFileUsed()) {
+			writeConfig(false)
 		}
 	}
 	return
@@ -96,13 +104,13 @@ var updateSelfAdvancedRootCmd = &cobra.Command{
 
 			} else {
 				if currentInstance == "" {
-					zboth.Info().Err(toError("no config file")).Msgf("This flag stores the settings in config file which is created only on installation.")
+					zboth.Info().Err(toError("no config file")).Msgf("This flag stores the settings in config file which is created only on installation. Please re-run the command after installation.")
 				} else {
 					zboth.Fatal().Err(toError("config file missing")).Msgf("Could not find config file %s", conf.ConfigFileUsed())
 				}
 			}
 		} else {
-			if selectYesNo("This process establishes contact with GitHub and gets data from them. Continue?", true) && (updateRequired() || (ownCall(cmd) && toBool(cmd.Flag("force").Value.String()))) {
+			if selectYesNo("This process establishes contact with GitHub and gets data from them. Continue?", true) && (updateRequired(true) || (ownCall(cmd) && toBool(cmd.Flag("force").Value.String()))) {
 				latestVersion := getLatestVersion()
 				if selectYesNo(toSprintf("Update %s from version %s to version %s", nameCLI, versionCLI, latestVersion), true) {
 					selfUpdate(latestVersion)

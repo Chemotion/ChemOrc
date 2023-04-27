@@ -44,7 +44,7 @@ import (
 const (
 	nameProject                     = "Chemotion ELN"
 	nameCLI                         = "chemCLI"
-	versionCLI                      = "0.2.3"
+	versionCLI                      = "0.2.4"
 	versionConfig                   = "2.0"
 	logFilename                     = "chem_cli.log"
 	defaultConfigFilepath           = "chem_cli.yml"
@@ -116,7 +116,7 @@ var rootCmd = &cobra.Command{
 				zboth.Fatal().Err(err).Msgf(err.Error())
 			}
 		}
-		if updateRequired() {
+		if updateRequired(false) {
 			zboth.Info().Msgf("%s%sThere is a new version of %s available.%s", string("\033[34m"), string("\033[1m"), nameCLI, string("\033[0m"))
 		}
 		if strings.Contains(versionCLI, "pre") {
