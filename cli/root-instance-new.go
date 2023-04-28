@@ -26,7 +26,7 @@ func parseCompose(use string) (compose viper.Viper) {
 		if isUrl {
 			zboth.Fatal().Err(err).Msgf("Failed to download the file from URL: %s.", use)
 		} else {
-			zboth.Fatal().Err(err).Msgf("Failed %s for compose not found.", use)
+			zboth.Fatal().Err(err).Msgf("Failed: %s file not found.", use)
 		}
 	}
 	// parse the compose file
@@ -151,8 +151,11 @@ func instanceCreateProduction(details map[string]string) (success bool) {
 	} else {
 		composeFile = downloadFile(details["use"], workDir.Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename)).String())
 	}
-	if err := changeKey(composeFile.String(), joinKey("services", "eln", "ports[0]"), toSprintf("%s:4000", details["port"])); err != nil {
-		zboth.Fatal().Err(err).Msgf("Failed to update the downloaded compose file. This is necessary for future use.")
+	if port != firstPort {
+		if err := changeKey(composeFile.String(), joinKey("services", "eln", "ports[0]"), toSprintf("%d:%s", firstPort, details["port"])); err != nil {
+			composeFile.Remove()
+			zboth.Fatal().Err(err).Msgf("Failed to update the downloaded compose file. This is necessary for future use.")
+		}
 	}
 	extendedCompose := createExtendedCompose(details, composeFile.String())
 	// store values in the conf, the conf file is modified only later
