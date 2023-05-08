@@ -13,12 +13,13 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version-file: "go.mod"
+      - name: Set version
+        run: echo "VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       - name: Build Go for all OSes
         run: |
           cp   payload/docker-compose.yml .
           cp   payload/backup.sh .
-          go   mod        verify
-          echo "VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+          go   mod        verify          
           CGO_ENABLED=0   GOOS=linux    GOARCH=amd64  go  build -ldflags "-X cli.versionCLI=${{ env.VERSION }}" -o chemCLI
           CGO_ENABLED=0   GOOS=darwin   GOARCH=arm64  go  build -ldflags "-X cli.versionCLI=${{ env.VERSION }}" -o chemCLI.arm.osx
           CGO_ENABLED=0   GOOS=darwin   GOARCH=amd64  go  build -ldflags "-X cli.versionCLI=${{ env.VERSION }}" -o chemCLI.amd.osx
