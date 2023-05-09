@@ -13,17 +13,15 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version-file: "go.mod"
-      - name: Set version
-        run: echo "VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       - name: Build Go for all OSes
         run: |
           cp   payload/docker-compose.yml .
           cp   payload/backup.sh .
           go   mod        verify          
-          CGO_ENABLED=0   GOOS=linux    GOARCH=amd64  go  build -ldflags "-X cli.versionCLI=${{ env.VERSION }}" -o chemCLI
-          CGO_ENABLED=0   GOOS=darwin   GOARCH=arm64  go  build -ldflags "-X cli.versionCLI=${{ env.VERSION }}" -o chemCLI.arm.osx
-          CGO_ENABLED=0   GOOS=darwin   GOARCH=amd64  go  build -ldflags "-X cli.versionCLI=${{ env.VERSION }}" -o chemCLI.amd.osx
-          CGO_ENABLED=0   GOOS=windows  GOARCH=amd64  go  build -ldflags "-X cli.versionCLI=${{ env.VERSION }}" -o chemCLI.exe
+          CGO_ENABLED=0   GOOS=linux    GOARCH=amd64  go  build -ldflags="-X github.com/${{ github.action_repository }}/cli.versionCLI=${{ github.ref_name }}" -o chemCLI
+          CGO_ENABLED=0   GOOS=darwin   GOARCH=arm64  go  build -ldflags="-X github.com/${{ github.action_repository }}/cli.versionCLI=${{ github.ref_name }}" -o chemCLI.arm.osx
+          CGO_ENABLED=0   GOOS=darwin   GOARCH=amd64  go  build -ldflags="-X github.com/${{ github.action_repository }}/cli.versionCLI=${{ github.ref_name }}" -o chemCLI.amd.osx
+          CGO_ENABLED=0   GOOS=windows  GOARCH=amd64  go  build -ldflags="-X github.com/${{ github.action_repository }}/cli.versionCLI=${{ github.ref_name }}" -o chemCLI.exe
       - name: Release Binaries
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')

@@ -44,7 +44,6 @@ import (
 const (
 	nameProject                     = "Chemotion ELN"
 	nameCLI                         = "chemCLI"
-	versionCLI                      = "0.2.4"
 	versionConfig                   = "2.0"
 	logFilename                     = "chem_cli.log"
 	defaultConfigFilepath           = "chem_cli.yml"
@@ -68,6 +67,8 @@ const (
 
 // configuration and logging
 var (
+	// version number, here to allow override
+	versionCLI = "0.2.4"
 	// currently selected instance
 	currentInstance string
 	// switches to true when this file is found in root of a computer
