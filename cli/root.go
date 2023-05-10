@@ -54,7 +54,6 @@ const (
 	instancesWord                   = "instances" // the folder/key in which chemotion expects to find all the instances
 	virtualizer                     = "docker"
 	addressDefault                  = "http://localhost"
-	shell                           = "bash"     // should work with linux (ubuntu, windows < WSL runs when running in powershell >, and macOS)
 	minimumVirtualizer              = "20.10.10" // so as to support docker compose files version 3.9 and forcing Docker Desktop >= 4
 	maxInstancesOfKind              = 63
 	firstPort                uint64 = 4000
@@ -68,7 +67,9 @@ const (
 // configuration and logging
 var (
 	// version number, here to allow override
-	versionCLI = "0.2.4"
+	versionCLI = "0.2.5"
+	// current shell
+	shell string
 	// currently selected instance
 	currentInstance string
 	// switches to true when this file is found in root of a computer
@@ -171,4 +172,5 @@ func init() {
 	initFlags()                             // initialize flags
 	cobra.OnInitialize(initConf, bindFlags) // intitialize configuration // bind the flag
 	rootCmd.SetVersionTemplate(toSprintf("%s version %s\n", nameCLI, versionCLI))
+	shell = determineShell()
 }

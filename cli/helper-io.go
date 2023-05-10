@@ -3,6 +3,7 @@ package cli
 import (
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/cavaliergopher/grab/v3"
@@ -106,12 +107,32 @@ func gotoFolder(givenName string) (pwd string) {
 	return
 }
 
+// determine shell to use
+func determineShell() (shell string) {
+	if runtime.GOOS == "windows" {
+		shell = "pwsh"
+	} else {
+		shell = os.Getenv("SHELL")
+	}
+	if shell == "" {
+		for _, shell = range []string{"bash", "sh", "zsh", "fish"} {
+			if _, err := exec.LookPath(shell); err == nil {
+				break
+			}
+		}
+	}
+	if shell == "" {
+		zboth.Fatal().Err(toError("no shell found")).Msgf("Cannot run this tool. No compatible shell found in path.")
+	}
+	return
+}
+
 // execute a command in shell
 func execShell(command string) (result []byte, err error) {
 	if result, err = exec.Command(shell, "-c", command).CombinedOutput(); err == nil {
-		zboth.Debug().Msgf("Sucessfully executed shell command: %s", command)
+		zboth.Debug().Msgf("Sucessfully executed shell command in shell: %s, %s", command, shell)
 	} else {
-		zboth.Warn().Err(err).Msgf("Failed execution of command: %s", command)
+		zboth.Warn().Err(err).Msgf("Failed execution of command in shell: %s, %s", command, shell)
 	}
 	return
 }
