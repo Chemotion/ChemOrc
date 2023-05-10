@@ -34,4 +34,3 @@ jobs:
             docker-compose.yml
             backup.sh
           token: "${{ secrets.GITHUB_TOKEN }}"
-          draft: true
