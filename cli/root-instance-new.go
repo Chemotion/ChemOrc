@@ -254,7 +254,16 @@ func processInstanceCreateCmd(cmd *cobra.Command, details map[string]string) (cr
 		}
 	}
 	// create new unique name for the instance
-	details["name"] = toSprintf("%s-%s", details["givenName"], getNewUniqueID())
+	if cmd.Flags().Lookup("suffix") != nil && cmd.Flag("suffix").Changed { // suffix exists only for restore flag
+		suffix := cmd.Flag("suffix").Value.String()
+		rec_len := len(getNewUniqueID())
+		if len(suffix) != rec_len {
+			zboth.Warn().Msgf("It is recommended that the length of the suffix is %d.", rec_len)
+		}
+		details["name"] = toSprintf("%s-%s", details["givenName"], suffix)
+	} else {
+		details["name"] = toSprintf("%s-%s", details["givenName"], getNewUniqueID())
+	}
 	return
 }
 

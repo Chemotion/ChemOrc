@@ -15,10 +15,10 @@ var restoreInstanceRootCmd = &cobra.Command{
 		}
 		if (db == "" || data == "") && isInteractive(true) {
 			if db == "" {
-				db = getString("Please enter the absolute path of your database backup file (e.g. /path/to/backup.sql.gz): ", fileValidate)
+				db = getString("Please enter the absolute path of your database backup file (e.g. /path/to/backup.sql.gz)", fileValidate)
 			}
 			if data == "" {
-				data = getString("Please enter the absolute path of your data backup file (e.g. /path/to/backup.data.tar.gz): ", fileValidate)
+				data = getString("Please enter the absolute path of your data backup file (e.g. /path/to/backup.data.tar.gz)", fileValidate)
 			}
 		}
 		details := make(map[string]string)
@@ -68,6 +68,7 @@ var restoreInstanceRootCmd = &cobra.Command{
 func init() {
 	instanceRootCmd.AddCommand(restoreInstanceRootCmd)
 	restoreInstanceRootCmd.Flags().StringP("name", "n", "must.be.given", "Name for the new instance")
+	restoreInstanceRootCmd.Flags().String("suffix", getNewUniqueID(), "An assigned suffix, instead of a random one. Use only if necessary.")
 	restoreInstanceRootCmd.Flags().String("use", composeURL, "URL or filepath of the compose file to use for creating the instance")
 	restoreInstanceRootCmd.Flags().String("address", addressDefault, "Web-address (or hostname) for accessing the instance")
 	restoreInstanceRootCmd.Flags().String("db", "", "Absolute path to the database backup file (e.g. /my/path/backup.sql.gz)")
