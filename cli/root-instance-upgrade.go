@@ -4,17 +4,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-version"
+	vercompare "github.com/hashicorp/go-version"
 	"github.com/spf13/cobra"
 )
 
 func upgradeRequired() (toUpgrade []string) {
 	if conf.IsSet(joinKey(stateWord, "latest_eln")) {
-		if latestVersion, err := version.NewVersion(conf.GetString(joinKey(stateWord, "latest_eln"))); err == nil {
+		if latestVersion, err := vercompare.NewVersion(conf.GetString(joinKey(stateWord, "latest_eln"))); err == nil {
 			for _, givenName := range allInstances() {
 				_, imageName, _ := strings.Cut(conf.GetString(joinKey(instancesWord, givenName, "image")), "/")
 				if _, imageVersion, found := strings.Cut(imageName, "-"); found {
-					if imVer, err := version.NewVersion(imageVersion); err == nil {
+					if imVer, err := vercompare.NewVersion(imageVersion); err == nil {
 						if latestVersion.GreaterThan(imVer) {
 							toUpgrade = append(toUpgrade, givenName)
 						}
