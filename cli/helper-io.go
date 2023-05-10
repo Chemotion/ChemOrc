@@ -34,7 +34,6 @@ func writeConfig(firstRun bool) (err error) {
 		preserve       = make(map[string]any)
 	)
 	if firstRun {
-		conf.Set("version", versionConfig)
 		conf.Set(joinKey(stateWord, selectorWord), currentInstance)
 		conf.Set(joinKey(stateWord, "quiet"), false)
 		conf.Set(joinKey(stateWord, "debug"), false)
@@ -46,6 +45,7 @@ func writeConfig(firstRun bool) (err error) {
 			conf.Set(key, oldConf.GetBool(key)) // set conf's key to what is read from existing file
 		}
 	}
+	conf.Set("version", versionConfig)
 	// write to file
 	if err = conf.WriteConfig(); err == nil {
 		zboth.Debug().Msgf("Modified configuration file `%s`.", conf.ConfigFileUsed())

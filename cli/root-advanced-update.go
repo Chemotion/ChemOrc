@@ -86,6 +86,9 @@ func updateRequired(check bool) (required bool) {
 		newVer, _ := vercompare.NewVersion(getLatestVersion())
 		required = newVer.GreaterThan(existingVer)
 		conf.Set(timeKey, time.Now())
+		latestCompose := parseCompose(composeURL)
+		_, latestVersion, _ := strings.Cut(latestCompose.GetString(joinKey("services", primaryService, "image")), "-")
+		conf.Set(joinKey(stateWord, "latest_eln"), latestVersion)
 		if existingFile(conf.ConfigFileUsed()) {
 			writeConfig(false)
 		}

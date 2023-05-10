@@ -1,10 +1,30 @@
 package cli
 
 import (
+	"strings"
 	"time"
 
+	"github.com/hashicorp/go-version"
 	"github.com/spf13/cobra"
 )
+
+func upgradeRequired() (toUpgrade []string) {
+	if conf.IsSet(joinKey(stateWord, "latest_eln")) {
+		if latestVersion, err := version.NewVersion(conf.GetString(joinKey(stateWord, "latest_eln"))); err == nil {
+			for _, givenName := range allInstances() {
+				_, imageName, _ := strings.Cut(conf.GetString(joinKey(instancesWord, givenName, "image")), "/")
+				if _, imageVersion, found := strings.Cut(imageName, "-"); found {
+					if imVer, err := version.NewVersion(imageVersion); err == nil {
+						if latestVersion.GreaterThan(imVer) {
+							toUpgrade = append(toUpgrade, givenName)
+						}
+					}
+				}
+			}
+		}
+	}
+	return
+}
 
 func pullImages(use string) {
 	tempCompose := parseCompose(use)
@@ -25,6 +45,8 @@ func instanceUpgrade(givenName, use string) {
 	name := getInternalName(givenName)
 	// download the new compose (in the working directory)
 	newComposeFile := downloadFile(composeURL, workDir.String())
+	newCompose := parseCompose(newComposeFile.String())
+	newImage := newCompose.GetString(joinKey("services", primaryService, "image"))
 	// get port from old compose
 	oldComposeFile := workDir.Join(instancesWord, name, chemotionComposeFilename)
 	oldCompose := parseCompose(oldComposeFile.String())
@@ -56,10 +78,14 @@ func instanceUpgrade(givenName, use string) {
 	if success {
 		commandStr := toSprintf(composeCall + "up --no-start")
 		zboth.Info().Msgf("Starting %s with command: %s", virtualizer, commandStr)
-		if _, success, _ = gotoFolder(givenName), callVirtualizer(commandStr), gotoFolder("workdir"); !success {
+		if _, success, _ = gotoFolder(givenName), callVirtualizer(commandStr), gotoFolder("workdir"); success {
+			conf.Set(joinKey(instancesWord, givenName, "image"), newImage)
+			writeConfig(false)
+			zboth.Info().Msgf("Instance upgraded successfully!")
+		} else {
 			zboth.Fatal().Err(toError("%s failed", commandStr)).Msgf("Failed to initialize upgraded %s. Check log. ABORT!", givenName)
 		}
-		zboth.Info().Msgf("Instance upgraded successfully!")
+
 	}
 }
 

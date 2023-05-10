@@ -44,7 +44,7 @@ import (
 const (
 	nameProject                     = "Chemotion ELN"
 	nameCLI                         = "chemCLI"
-	versionConfig                   = "2.0"
+	versionConfig                   = "2.1"
 	logFilename                     = "chem_cli.log"
 	defaultConfigFilepath           = "chem_cli.yml"
 	chemotionComposeFilename        = "docker-compose.yml"
@@ -119,6 +119,9 @@ var rootCmd = &cobra.Command{
 		}
 		if updateRequired(false) {
 			zboth.Info().Msgf("%s%sThere is a new version of %s available.%s", string("\033[34m"), string("\033[1m"), nameCLI, string("\033[0m"))
+		}
+		if toUpgrade := upgradeRequired(); len(toUpgrade) > 0 {
+			zboth.Info().Msgf("%s%sThe following instance(s) can be upgraded: %s.%s", string("\033[34m"), string("\033[1m"), strings.Join(toUpgrade, ", "), string("\033[0m"))
 		}
 		if strings.Contains(versionCLI, "pre") {
 			zboth.Warn().Msgf("This is a pre-release version. Do not use this in production.")
