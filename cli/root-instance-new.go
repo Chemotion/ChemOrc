@@ -152,7 +152,7 @@ func instanceCreateProduction(details map[string]string) (success bool) {
 		composeFile = downloadFile(details["use"], workDir.Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename)).String())
 	}
 	if port != firstPort {
-		if err := changeKey(composeFile.String(), joinKey("services", "eln", "ports[0]"), toSprintf("%s:%d", firstPort, details["port"])); err != nil {
+		if err := changeKey(composeFile.String(), joinKey("services", "eln", "ports[0]"), toSprintf("%d:%s", firstPort, details["port"])); err != nil {
 			composeFile.Remove()
 			zboth.Fatal().Err(err).Msgf("Failed to update the downloaded compose file. This is necessary for future use.")
 		}
@@ -254,7 +254,16 @@ func processInstanceCreateCmd(cmd *cobra.Command, details map[string]string) (cr
 		}
 	}
 	// create new unique name for the instance
-	details["name"] = toSprintf("%s-%s", details["givenName"], getNewUniqueID())
+	if cmd.Flags().Lookup("suffix") != nil && cmd.Flag("suffix").Changed { // suffix exists only for restore flag
+		suffix := cmd.Flag("suffix").Value.String()
+		rec_len := len(getNewUniqueID())
+		if len(suffix) != rec_len {
+			zboth.Warn().Msgf("It is recommended that the length of the suffix is %d.", rec_len)
+		}
+		details["name"] = toSprintf("%s-%s", details["givenName"], suffix)
+	} else {
+		details["name"] = toSprintf("%s-%s", details["givenName"], getNewUniqueID())
+	}
 	return
 }
 
