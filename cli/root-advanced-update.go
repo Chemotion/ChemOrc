@@ -25,6 +25,9 @@ func selfUpdate(version string) {
 			zboth.Info().Msgf("Successfully downloaded the new version. Old version is available as %s and is safe to remove.", oldVersion.Name())
 			conf.Set(joinKey(stateWord, "version"), version)
 			if existingFile(conf.ConfigFileUsed()) {
+				latestCompose := parseCompose(composeURL)
+				_, latestVersion, _ := strings.Cut(latestCompose.GetString(joinKey("services", primaryService, "image")), "-")
+				conf.Set(joinKey(stateWord, "latest_eln"), latestVersion)
 				if err := writeConfig(false); err != nil {
 					zboth.Warn().Err(err).Msgf("Failed to rewrite config file. You will also need to update the %s.version to %s in the %s file manually.", stateWord, version, conf.ConfigFileUsed())
 				}
@@ -86,6 +89,9 @@ func updateRequired(check bool) (required bool) {
 		newVer, _ := vercompare.NewVersion(getLatestVersion())
 		required = newVer.GreaterThan(existingVer)
 		conf.Set(timeKey, time.Now())
+		latestCompose := parseCompose(composeURL)
+		_, latestVersion, _ := strings.Cut(latestCompose.GetString(joinKey("services", primaryService, "image")), "-")
+		conf.Set(joinKey(stateWord, "latest_eln"), latestVersion)
 		if existingFile(conf.ConfigFileUsed()) {
 			writeConfig(false)
 		}

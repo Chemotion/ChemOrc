@@ -30,9 +30,7 @@ POSSIBILITY OF SUCH DAMAGE.
 */
 package main
 
-import (
-	"github.com/harivyasi/ChemCLI/cli"
-)
+import "github.com/Chemotion/ChemCLI/cli"
 
 func main() {
 	cli.Execute()

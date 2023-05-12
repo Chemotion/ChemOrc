@@ -36,6 +36,7 @@ import (
 	"strings"
 
 	"github.com/chigopher/pathlib"
+	color "github.com/mitchellh/colorstring"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -44,8 +45,7 @@ import (
 const (
 	nameProject                     = "Chemotion ELN"
 	nameCLI                         = "chemCLI"
-	versionCLI                      = "0.2.4"
-	versionConfig                   = "2.0"
+	versionConfig                   = "2.1"
 	logFilename                     = "chem_cli.log"
 	defaultConfigFilepath           = "chem_cli.yml"
 	chemotionComposeFilename        = "docker-compose.yml"
@@ -55,7 +55,6 @@ const (
 	instancesWord                   = "instances" // the folder/key in which chemotion expects to find all the instances
 	virtualizer                     = "docker"
 	addressDefault                  = "http://localhost"
-	shell                           = "bash"     // should work with linux (ubuntu, windows < WSL runs when running in powershell >, and macOS)
 	minimumVirtualizer              = "20.10.10" // so as to support docker compose files version 3.9 and forcing Docker Desktop >= 4
 	maxInstancesOfKind              = 63
 	firstPort                uint64 = 4000
@@ -68,6 +67,10 @@ const (
 
 // configuration and logging
 var (
+	// version number, here to allow override
+	versionCLI = "0.2.5"
+	// current shell
+	shell string
 	// currently selected instance
 	currentInstance string
 	// switches to true when this file is found in root of a computer
@@ -111,13 +114,16 @@ var rootCmd = &cobra.Command{
 		zboth.Info().Msgf("Welcome to %s! You are on a host machine.", nameCLI)
 		if currentInstance != "" {
 			if err := instanceValidate(currentInstance); err == nil {
-				zboth.Info().Msgf("The instance you are currently managing is %s%s%s%s.", string("\033[31m"), string("\033[1m"), currentInstance, string("\033[0m"))
+				zboth.Info().Msgf("The instance you are currently managing is %s.", color.Color(toSprintf("[green]%s", currentInstance)))
 			} else {
 				zboth.Fatal().Err(err).Msgf(err.Error())
 			}
 		}
 		if updateRequired(false) {
-			zboth.Info().Msgf("%s%sThere is a new version of %s available.%s", string("\033[34m"), string("\033[1m"), nameCLI, string("\033[0m"))
+			zboth.Info().Msgf(color.Color(toSprintf("[yellow][bold]There is a new version of %s available.", nameCLI)))
+		}
+		if toUpgrade := upgradeRequired(); len(toUpgrade) > 0 {
+			zboth.Info().Msgf(color.Color(toSprintf("[red][bold]The following instance(s) can be upgraded: %s.", strings.Join(toUpgrade, ", "))))
 		}
 		if strings.Contains(versionCLI, "pre") {
 			zboth.Warn().Msgf("This is a pre-release version. Do not use this in production.")
@@ -167,4 +173,5 @@ func init() {
 	initFlags()                             // initialize flags
 	cobra.OnInitialize(initConf, bindFlags) // intitialize configuration // bind the flag
 	rootCmd.SetVersionTemplate(toSprintf("%s version %s\n", nameCLI, versionCLI))
+	shell = determineShell()
 }

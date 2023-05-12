@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-release-binary:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -17,16 +17,15 @@ jobs:
         run: |
           cp   payload/docker-compose.yml .
           cp   payload/backup.sh .
-          go   mod                        verify
-          GOOS=linux    GOARCH=amd64  go  build -o chemCLI
-          GOOS=darwin   GOARCH=arm64  go  build -o chemCLI.arm.osx
-          GOOS=darwin   GOARCH=amd64  go  build -o chemCLI.amd.osx
-          GOOS=windows  GOARCH=amd64  go  build -o chemCLI.exe
+          go   mod        verify          
+          CGO_ENABLED=0   GOOS=linux    GOARCH=amd64  go  build -ldflags="-X github.com/${{ github.repository }}/cli.versionCLI=${{ github.ref_name }}" -o chemCLI
+          CGO_ENABLED=0   GOOS=darwin   GOARCH=arm64  go  build -ldflags="-X github.com/${{ github.repository }}/cli.versionCLI=${{ github.ref_name }}" -o chemCLI.arm.osx
+          CGO_ENABLED=0   GOOS=darwin   GOARCH=amd64  go  build -ldflags="-X github.com/${{ github.repository }}/cli.versionCLI=${{ github.ref_name }}" -o chemCLI.amd.osx
+          CGO_ENABLED=0   GOOS=windows  GOARCH=amd64  go  build -ldflags="-X github.com/${{ github.repository }}/cli.versionCLI=${{ github.ref_name }}" -o chemCLI.exe
       - name: Release Binaries
-        uses: "marvinpinto/action-automatic-releases@latest"
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          prerelease: false
           files: |
             chemCLI
             chemCLI.arm.osx
@@ -34,5 +33,4 @@ jobs:
             chemCLI.exe
             docker-compose.yml
             backup.sh
-      - name: Run latest-tag
-        uses: EndBug/latest-tag@latest
+          token: "${{ secrets.GITHUB_TOKEN }}"
