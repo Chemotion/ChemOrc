@@ -6,18 +6,19 @@ import (
 	"strings"
 
 	"github.com/manifoldco/promptui"
+	color "github.com/mitchellh/colorstring"
 )
 
 // Prompt to select a value from a given set of values.
 // Also displays the currently selected instance.
 func selectOpt(acceptedOpts []string, msg string) (result string) {
-	coloredExit := toSprintf("%sexit", string("\033[31m"))
+	coloredExit := color.Color("[red]exit")
 	if acceptedOpts[len(acceptedOpts)-1] == "exit" {
 		acceptedOpts[len(acceptedOpts)-1] = coloredExit
 	}
 	zlog.Debug().Msgf("Selection prompt with options %s:", acceptedOpts)
 	if msg == "" {
-		msg = toSprintf("%s%s%s%s Select one of the following", string("\033[31m"), string("\033[1m"), currentInstance, string("\033[0m"))
+		msg = color.Color(toSprintf("[green][dim]{%s} ", currentInstance)) + "Select one of the following"
 	}
 	selection := promptui.Select{
 		Label: msg,

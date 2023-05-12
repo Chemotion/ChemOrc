@@ -1,6 +1,7 @@
 package cli
 
 import (
+	color "github.com/mitchellh/colorstring"
 	"github.com/spf13/cobra"
 )
 
@@ -8,7 +9,7 @@ func instanceSwitch(givenName string) {
 	conf.Set(joinKey(stateWord, selectorWord), givenName)
 	if err := writeConfig(false); err == nil {
 		currentInstance = givenName
-		zboth.Info().Msgf("Instance being managed switched to %s%s%s%s.", string("\033[31m"), string("\033[1m"), currentInstance, string("\033[0m"))
+		zboth.Info().Msgf("Instance being managed switched to %s.", color.Color(toSprintf("[green]%s", currentInstance)))
 	} else {
 		zboth.Fatal().Err(err).Msgf("Failed to update the selected instance.")
 	}
