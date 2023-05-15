@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"github.com/mitchellh/colorstring"
 	"github.com/spf13/cobra"
 )
 
@@ -9,7 +8,7 @@ func instanceSwitch(givenName string) {
 	conf.Set(joinKey(stateWord, selectorWord), givenName)
 	if err := writeConfig(false); err == nil {
 		currentInstance = givenName
-		zboth.Info().Msgf("Instance being managed switched to %s.", colorstring.Color("[red][bold]" + currentInstance))
+		zboth.Info().Msgf("Instance being managed switched to %s%s%s%s.", string("\033[31m"), string("\033[1m"), currentInstance, string("\033[0m"))
 	} else {
 		zboth.Fatal().Err(err).Msgf("Failed to update the selected instance.")
 	}
@@ -21,6 +20,7 @@ var switchInstanceRootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, _ []string) {
 		if len(allInstances()) == 1 {
 			zboth.Fatal().Err(toError("only one instance")).Msgf("You cannot switch because you only have one instance.")
+
 		}
 		if ownCall(cmd) {
 			if cmd.Flag("name").Changed {

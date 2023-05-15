@@ -6,19 +6,18 @@ import (
 	"strings"
 
 	"github.com/manifoldco/promptui"
-	"github.com/mitchellh/colorstring"
 )
 
 // Prompt to select a value from a given set of values.
 // Also displays the currently selected instance.
 func selectOpt(acceptedOpts []string, msg string) (result string) {
-	coloredExit := colorstring.Color("[red]exit")
+	coloredExit := toSprintf("%sexit", string("\033[31m"))
 	if acceptedOpts[len(acceptedOpts)-1] == "exit" {
 		acceptedOpts[len(acceptedOpts)-1] = coloredExit
 	}
 	zlog.Debug().Msgf("Selection prompt with options %s:", acceptedOpts)
 	if msg == "" {
-		msg = colorstring.Color("[red][bold]" + currentInstance + "[reset] Select one of the following")
+		msg = toSprintf("%s%s%s%s Select one of the following", string("\033[31m"), string("\033[1m"), currentInstance, string("\033[0m"))
 	}
 	selection := promptui.Select{
 		Label: msg,
@@ -65,7 +64,6 @@ func selectYesNo(question string, defValue bool) (result bool) {
 	zlog.Debug().Msgf("Selected answer: %t", result)
 	return
 }
-
 
 func textValidate(input string) (err error) {
 	if len(strings.ReplaceAll(input, " ", "")) == 0 {
@@ -158,12 +156,11 @@ func getString(message string, validator promptui.ValidateFunc) (result string) 
 func selectInstance(action string) (instance string) {
 	existingInstances := append(allInstances(), "exit")
 	if len(existingInstances) < 6 {
-		instance = selectOpt(existingInstances, colorstring.Color("[blue]Please pick the instance to " + action + ":"))
+		instance = selectOpt(existingInstances, toSprintf("Please pick the instance to %s:", action))
 	} else {
 		zboth.Info().Msgf(strings.Join(append([]string{"The following instances exist: "}, allInstances()...), "\n"))
 		zlog.Debug().Msgf("String prompt to select instance")
-		instance = getString(colorstring.Color("[blue]Please name the instance to " + action), instanceValidate)
+		instance = getString("Please name the instance to "+action, instanceValidate)
 	}
 	return
 }
-

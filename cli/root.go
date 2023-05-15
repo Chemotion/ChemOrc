@@ -36,7 +36,6 @@ import (
 	"strings"
 
 	"github.com/chigopher/pathlib"
-	"github.com/mitchellh/colorstring"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -114,16 +113,16 @@ var rootCmd = &cobra.Command{
 		zboth.Info().Msgf("Welcome to %s! You are on a host machine.", nameCLI)
 		if currentInstance != "" {
 			if err := instanceValidate(currentInstance); err == nil {
-				zboth.Info().Msgf("The instance you are currently managing is %s.", colorstring.Color("[red][bold]" + currentInstance + "[reset]"))
+				zboth.Info().Msgf("The instance you are currently managing is %s%s%s%s.", string("\033[31m"), string("\033[1m"), currentInstance, string("\033[0m"))
 			} else {
 				zboth.Fatal().Err(err).Msgf(err.Error())
 			}
 		}
 		if updateRequired(false) {
-			zboth.Info().Msgf("%sThere is a new version of %s available.%s", colorstring.Color("[blue][bold]"), nameCLI, colorstring.Color("[reset]"))
+			zboth.Info().Msgf("%s%sThere is a new version of %s available.%s", string("\033[34m"), string("\033[1m"), nameCLI, string("\033[0m"))
 		}
 		if toUpgrade := upgradeRequired(); len(toUpgrade) > 0 {
-			zboth.Info().Msgf("%sThe following instance(s) can be upgraded: %s.%s", colorstring.Color("[blue][bold]"), strings.Join(toUpgrade, ", "), colorstring.Color("[reset]"))
+			zboth.Info().Msgf("%s%sThe following instance(s) can be upgraded: %s.%s", string("\033[34m"), string("\033[1m"), strings.Join(toUpgrade, ", "), string("\033[0m"))
 		}
 		if strings.Contains(versionCLI, "pre") {
 			zboth.Warn().Msgf("This is a pre-release version. Do not use this in production.")
