@@ -83,6 +83,25 @@ func contains(s []string, str string) bool {
 	return false
 }
 
+func copyFileToContainer(filename string, containerID string) {
+
+	sourceFilePath := "./payload/" + filename
+	destinationFilePath := "/embed/scripts/" + filename
+
+	cmd := exec.Command("docker", "cp", sourceFilePath, fmt.Sprintf("%s:%s", containerID, destinationFilePath))
+	fmt.Println(cmd)
+	err := cmd.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Set the file permissions to executable
+	cmd = exec.Command("docker", "exec", containerID, "chmod", "+x", destinationFilePath)
+	err = cmd.Run()
+	if err != nil {
+		zboth.Fatal().Err(err).Msgf("Failed to assign proper rights to the script file %s ", destinationFilePath)
+	}
+}
+
 func handleCreateUserLogic() {
 	containerID := getContainerID(currentInstance, "eln")
 	sourcePath := "./payload/createUser.sh"
@@ -169,6 +188,55 @@ func handleDeleteUserLogic() {
 	fmt.Println(strings.Split(string(stdOutStderr), "\n"))
 }
 
+func handleUpdateUserLogic() {
+
+	containerId := getContainerID(currentInstance, "eln")
+	filename := "updateUser.sh"
+	scriptPath := "/embed/scripts/" + filename
+
+	copyFileToContainer(filename, containerId)
+
+	var email string
+	fmt.Print(Green + "\nPlease enter an Email Address of the user you wish to update: " + Reset)
+	fmt.Scanln(&email)
+	if len(email) == 0 {
+		fmt.Println("No email is given")
+		log.Fatal()
+	}
+
+	passwd, fname, lname, abbreviation := userDataInput()
+	args := []string{email, string(passwd), fname, lname, abbreviation}
+	argString := strings.Join(args, " ")
+
+	cmd := exec.Command("docker", "exec", containerId, "bash", "-c", scriptPath+" "+argString)
+	stdoutStderr, err := cmd.CombinedOutput()
+
+	if err != nil {
+		zboth.Fatal().Err(err).Msgf("Failed to execute script file %s ", scriptPath)
+	}
+	stdErrConsole := strings.Split(string(stdoutStderr), "\n")
+	fmt.Printf("%s\n", stdErrConsole[len(stdErrConsole)-2])
+
+	/*
+
+		passwd, fname, lname, abbreviation := userDataInput()
+
+		args := []string{email, string(passwd), fname, lname, abbreviation}
+		argString := strings.Join(args, " ")
+
+		stdErrConsole := strings.Split(string(stdoutStderr), "\n")
+		if contains(stdErrConsole, "false") {
+			fmt.Printf("%s\n", stdoutStderr)
+			fmt.Printf("It seems, email: %s or abbreviation: %s is already taken\n", Yellow+email+Reset, Yellow+abbreviation+Reset)
+			fmt.Println("Please choose unique attributes for this user")
+		} else {
+			fmt.Printf("Script %s executed successfully inside container %s.\n", Yellow+scriptPath+Reset, Yellow+containerId+Reset)
+			fmt.Printf("User has been updated successfully")
+		}
+
+	*/
+}
+
 // create a new user of type Admin, Person and Device (for now only type:Person is supported)
 var createUserManagementInstanceRootCmd = &cobra.Command{
 	Use:     "create",
@@ -196,9 +264,9 @@ var updateUserManagementInstanceRootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		// Handle Add update logic here
 		if ownCall(cmd) {
-			fmt.Println("handleUpdateUserLogic()")
+			handleUpdateUserLogic()
 		} else {
-			fmt.Println("handleUpdateUserLogic()")
+			handleUpdateUserLogic()
 		}
 	},
 }
