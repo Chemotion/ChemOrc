@@ -44,9 +44,9 @@ var consoleInstanceRootCmd = &cobra.Command{
 			if isInteractive(true) {
 				acceptedOpts := []string{"shell", "ruby on rails", "postgreSQL"}
 				if ownCall(cmd) {
-					acceptedOpts = append(acceptedOpts, "exit")
+					acceptedOpts = append(acceptedOpts, coloredExit)
 				} else {
-					acceptedOpts = append(acceptedOpts, []string{"back", "exit"}...)
+					acceptedOpts = append(acceptedOpts, []string{"back", coloredExit}...)
 				}
 				selected = selectOpt(acceptedOpts, "")
 			}
@@ -60,14 +60,13 @@ var consoleInstanceRootCmd = &cobra.Command{
 			dropIntoConsole(currentInstance, "psql")
 		case "back":
 			cmd.Run(cmd, args)
-		case "exit":
+		case coloredExit:
 			os.Exit(0)
 		case "multiple arguments":
 			zboth.Warn().Msgf("console expects only ONE argument of the following: %s.", strings.Join(cmd.ValidArgs, ", "))
 		default:
 			zboth.Info().Msgf("console expects one of the following: %s.", strings.Join(cmd.ValidArgs, ", "))
 		}
-
 	},
 }
 

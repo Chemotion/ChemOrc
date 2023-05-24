@@ -15,18 +15,18 @@ var instanceRootCmd = &cobra.Command{
 		isInteractive(true)
 		var acceptedOpts []string
 		if elementInSlice(instanceStatus(currentInstance), &[]string{"Exited", "Created"}) == -1 { // checks if the instance is running
-			acceptedOpts = []string{"stats", "ping", "logs", "consoles", "manage"}
+			acceptedOpts = []string{"stats", "ping", "logs", "consoles", "users"}
 			instanceCmdTable["stats"] = statInstanceRootCmd.Run
 			instanceCmdTable["ping"] = pingInstanceRootCmd.Run
 			instanceCmdTable["consoles"] = consoleInstanceRootCmd.Run
 			instanceCmdTable["logs"] = logInstanceRootCmd.Run
-			instanceCmdTable["manage"] = usermanagementCmd.Run
+			instanceCmdTable["users"] = userInstanceRootCmd.Run
 		} else if instanceStatus(currentInstance) != "Created" {
 			acceptedOpts = []string{"logs"}
 			instanceCmdTable["logs"] = logInstanceRootCmd.Run
 		}
 		if len(allInstances()) > 1 {
-			acceptedOpts = append(acceptedOpts, []string{"switch", "backup", "upgrade", "list", "new", "restore", "remove", "manage"}...)
+			acceptedOpts = append(acceptedOpts, []string{"switch", "backup", "upgrade", "list", "new", "restore", "remove"}...)
 			instanceCmdTable["switch"] = switchInstanceRootCmd.Run
 			instanceCmdTable["backup"] = backupInstanceRootCmd.Run
 			instanceCmdTable["upgrade"] = upgradeInstanceRootCmd.Run
@@ -34,7 +34,6 @@ var instanceRootCmd = &cobra.Command{
 			instanceCmdTable["remove"] = removeInstanceRootCmd.Run
 			instanceCmdTable["new"] = newInstanceRootCmd.Run
 			instanceCmdTable["restore"] = restoreInstanceRootCmd.Run
-			instanceCmdTable["manage"] = usermanagementCmd.Run
 		} else {
 			acceptedOpts = append(acceptedOpts, []string{"backup", "upgrade", "new", "restore"}...)
 			instanceCmdTable["backup"] = backupInstanceRootCmd.Run
@@ -43,9 +42,9 @@ var instanceRootCmd = &cobra.Command{
 			instanceCmdTable["restore"] = restoreInstanceRootCmd.Run
 		}
 		if cmd.CalledAs() == "instance" {
-			acceptedOpts = append(acceptedOpts, "exit")
+			acceptedOpts = append(acceptedOpts, coloredExit)
 		} else {
-			acceptedOpts = append(acceptedOpts, []string{"back", "exit"}...)
+			acceptedOpts = append(acceptedOpts, []string{"back", coloredExit}...)
 			instanceCmdTable["back"] = cmd.Run
 		}
 		instanceCmdTable[selectOpt(acceptedOpts, "")](cmd, args)

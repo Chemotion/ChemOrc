@@ -12,13 +12,13 @@ import (
 // Prompt to select a value from a given set of values.
 // Also displays the currently selected instance.
 func selectOpt(acceptedOpts []string, msg string) (result string) {
-	coloredExit := color.Color("[red]exit")
-	if acceptedOpts[len(acceptedOpts)-1] == "exit" {
-		acceptedOpts[len(acceptedOpts)-1] = coloredExit
-	}
 	zlog.Debug().Msgf("Selection prompt with options %s:", acceptedOpts)
 	if msg == "" {
-		msg = color.Color(toSprintf("[green][dim]{%s} ", currentInstance)) + "Select one of the following"
+		if currentInstance == "" {
+			msg = "Select one of the following"
+		} else {
+			msg = color.Color(toSprintf("[green][dim]{%s} ", currentInstance)) + "Select one of the following"
+		}
 	}
 	selection := promptui.Select{
 		Label: msg,
@@ -66,6 +66,17 @@ func selectYesNo(question string, defValue bool) (result bool) {
 	return
 }
 
+func emailValidate(input string) (err error) {
+	if err = textValidate(input); err == nil {
+		if strings.Count(input, "@") != 1 || strings.Count(input, ".") < 1 {
+			err = toError("please input a valid email address")
+		} else {
+			err = nil
+		}
+	}
+	return
+}
+
 func textValidate(input string) (err error) {
 	if len(strings.ReplaceAll(input, " ", "")) == 0 {
 		err = toError("can not accept empty value")
@@ -78,8 +89,7 @@ func textValidate(input string) (err error) {
 }
 
 func instanceValidate(input string) (err error) {
-	err = textValidate(input)
-	if err == nil {
+	if err = textValidate(input); err == nil {
 		if len(getSubHeadings(&conf, joinKey(instancesWord, input))) == 0 {
 			err = toError("there is no instance called %s", input)
 		}
@@ -155,13 +165,41 @@ func getString(message string, validator promptui.ValidateFunc) (result string) 
 
 // to select an instance, gives a list to select from when less than 5, else a text input
 func selectInstance(action string) (instance string) {
-	existingInstances := append(allInstances(), "exit")
+	existingInstances := append(allInstances(), coloredExit)
 	if len(existingInstances) < 6 {
 		instance = selectOpt(existingInstances, toSprintf("Please pick the instance to %s:", action))
 	} else {
 		zboth.Info().Msgf(strings.Join(append([]string{"The following instances exist: "}, allInstances()...), "\n"))
 		zlog.Debug().Msgf("String prompt to select instance")
 		instance = getString("Please name the instance to "+action, instanceValidate)
+	}
+	return
+}
+
+// to get a new password
+func getPassword() (password string) {
+	prompt := promptui.Prompt{
+		Label:       "Please enter new password",
+		Mask:        '*',
+		HideEntered: true,
+	}
+	var confirm string
+	var err error
+	if confirm, err = prompt.Run(); err == nil {
+		zlog.Debug().Msgf("Password, first attempt gathered")
+		prompt.Label = "Please re-enter the same password to confirm it"
+		if password, err = prompt.Run(); err == nil {
+			zlog.Debug().Msgf("Password, second attempt gathered")
+			if password != confirm {
+				zboth.Warn().Err(toError("password mismatch")).Msgf("The two passwords do not match, please try again.")
+				password = getPassword()
+			}
+		}
+	}
+	if err == promptui.ErrInterrupt || err == promptui.ErrEOF {
+		zboth.Fatal().Err(toError("prompt cancelled")).Msgf("Prompt cancelled. Can't proceed without. ABORT!")
+	} else if err != nil {
+		zboth.Fatal().Err(err).Msgf("Prompt failed because: %s.", err.Error())
 	}
 	return
 }

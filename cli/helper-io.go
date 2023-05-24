@@ -131,6 +131,7 @@ func determineShell() (shell string) {
 func execShell(command string) (result []byte, err error) {
 	if result, err = exec.Command(shell, "-c", command).CombinedOutput(); err == nil {
 		zboth.Debug().Msgf("Sucessfully executed shell command: %s in shell: %s", command, shell)
+		zlog.Debug().Msgf("Output of execution: %s", result) // output not on screen
 	} else {
 		zboth.Warn().Err(err).Msgf("Failed execution of command: %s in shell: %s", command, shell)
 	}
@@ -142,7 +143,7 @@ func changeExposedPort(filename string, newPort string) (err error) {
 	if existingFile(filename) {
 		var result []byte
 		//if success := callVirtualizer(toSprintf("run --rm -v %s:/workdir mikefarah/yq eval -i .%s=\"%s\" %s", where, key, value, filename)); !success {
-		if result, err = execShell(toSprintf("cat %s | %s run -i --rm mikefarah/yq '.%s |= sub(\":%d\", \":%s\")'", filename, virtualizer, joinKey("services", "eln", "ports[0]"), firstPort, newPort)); err == nil {
+		if result, err = execShell(toSprintf("cat %s | %s run -i --rm mikefarah/yq '.%s |= sub(\"%d:\", \"%s:\")'", filename, virtualizer, joinKey("services", "eln", "ports[0]"), firstPort, newPort)); err == nil {
 			yamlFile := pathlib.NewPath(filename)
 			err = yamlFile.WriteFile(result)
 		}

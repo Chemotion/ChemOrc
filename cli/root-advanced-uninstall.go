@@ -43,8 +43,8 @@ var uninstallAdvancedRootCmd = &cobra.Command{
 			zerolog.SetGlobalLevel(zerolog.DebugLevel) // uninstall operates in debug mode
 			zboth.Debug().Msgf("Uninstall operates in debug mode!")
 			if selectYesNo(toSprintf("Are you sure you want to uninstall %s completely; this also removes all instances of %s", nameCLI, nameProject), false) {
-				switch selectOpt([]string{"yes", "no", "exit"}, "Do you want to keep the log file after successful uninstallation") {
-				case "exit":
+				switch selectOpt([]string{"yes", "no", coloredExit}, "Do you want to keep the log file after successful uninstallation") {
+				case coloredExit:
 					// ideally this case is handled in the selectOpt function, here as a safety precaution
 					os.Exit(0)
 				case "yes":
