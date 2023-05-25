@@ -47,17 +47,39 @@ func createUser(givenName, email string) {
 		typeOfUser = "Admin"
 	}
 	password := getPassword()
-	runRailsCommand(givenName, primaryService, toSprintf("User.create(email:'%s', password:'%s', first_name:'%s', last_name:'%s', type:'%s', name_abbreviation:'%s').save", email, password, firstname, lastname, typeOfUser, abbreviation))
-	// if strings.TrimSpace(output) == "false" {
-	// 	zboth.
-	// }
+	output := strings.Split(runRailsCommand(givenName, primaryService, toSprintf("User.create(email:'%s', password:'%s', first_name:'%s', last_name:'%s', type:'%s', name_abbreviation:'%s').save", email, password, firstname, lastname, typeOfUser, abbreviation)), " ")
+	if toBool(output[len(output)-1]) {
+		zboth.Info().Msgf("User created successfully.")
+	} else {
+		zboth.Warn().Err(toError("user creation failed")).Msgf("Failed to create user. Please ensure that all conditions for abbreviation and password are met.")
+	}
 }
 
-func modifyUser(givenName, email string) {}
+func modifyUser(givenName, email string) {
+	details := getUserDetails(givenName, email)
+	options := []string{"First name: " + details["firstname"], "Last name: " + details["lastname"], "Abbreviation: " + details["abbreviation"], "Password"}
+	var subStr string
+	switch selectOpt(options, "Which value do you want to change") {
+	case "First name: " + details["firstname"]:
+		subStr = toSprintf("first_name:'%s'", getString("Please enter new first name for the user", textValidate))
+	case "Last name: " + details["lastname"]:
+		subStr = toSprintf("last_name:'%s'", getString("Please enter new last name for the user", textValidate))
+	case "Abbreviation: " + details["abbreviation"]:
+		subStr = toSprintf("name_abbreviation:'%s'", getString("Please enter new abbreviation for the user", textValidate))
+	case "Password":
+		subStr = toSprintf("password:'%s'", getPassword())
+	}
+	output := strings.Split(runRailsCommand(givenName, primaryService, toSprintf("User.find_by(email:'%s').update(%s)", email, subStr)), " ")
+	if toBool(output[len(output)-1]) {
+		zboth.Info().Msgf("User details modified successfully.")
+	} else {
+		zboth.Warn().Err(toError("user detail modification failed")).Msgf("Failed to change user details. Please ensure that all conditions for abbreviation and password are met.")
+	}
+}
 
 func getUserDetails(givenName, email string) (details map[string]string) {
 	details = make(map[string]string)
-	detail := strings.Split(strings.TrimFunc(runRailsCommand(givenName, primaryService, "User.where(email:'"+email+"').map {|u| u.first_name + ' ' + u.last_name + ' '+ u.name_abbreviation + ' ' + u.type }"), func(r rune) bool { return r == '[' || r == ']' || r == '"' }), " ")
+	detail := strings.Split(strings.TrimFunc(runRailsCommand(givenName, primaryService, "User.where(email:'"+email+"').map {|u| u.first_name + '%' + u.last_name + '%'+ u.name_abbreviation + '%' + u.type }"), func(r rune) bool { return r == '[' || r == ']' || r == '"' }), "%")
 	details["firstname"] = detail[0]
 	details["lastname"] = detail[1]
 	details["fullname"] = details["firstname"] + " " + details["lastname"]

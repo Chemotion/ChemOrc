@@ -7,6 +7,7 @@ import (
 
 	"github.com/manifoldco/promptui"
 	color "github.com/mitchellh/colorstring"
+	"github.com/rs/zerolog"
 )
 
 // Prompt to select a value from a given set of values.
@@ -178,6 +179,9 @@ func selectInstance(action string) (instance string) {
 
 // to get a new password
 func getPassword() (password string) {
+	if zerolog.GlobalLevel() == zerolog.DebugLevel {
+		zboth.Warn().Err(toError("password in debug mode")).Msgf(color.Color("You are gathering password while in debug mode. [red]!!! The password will be stored in the log file as plain-text !!![reset] Exit now to avoid this."))
+	}
 	prompt := promptui.Prompt{
 		Label:       "Please enter new password",
 		Mask:        '*',
@@ -191,7 +195,7 @@ func getPassword() (password string) {
 		if password, err = prompt.Run(); err == nil {
 			zlog.Debug().Msgf("Password, second attempt gathered")
 			if password != confirm {
-				zboth.Warn().Err(toError("password mismatch")).Msgf("The two passwords do not match, please try again.")
+				zboth.Warn().Err(toError("password mismatch")).Msgf("The re-entered password does not match, please try again.")
 				password = getPassword()
 			}
 		}
