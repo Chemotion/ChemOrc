@@ -102,7 +102,7 @@ var upgradeInstanceRootCmd = &cobra.Command{
 			upgrade = !pull
 		}
 		if !pull && isInteractive(false) {
-			switch selectOpt([]string{"all actions: pull image, backup and upgrade", "preparation: pull image and backup", "upgrade only (if already prepared)", "pull image only", "exit"}, "What do you want to do") {
+			switch selectOpt([]string{"all actions: pull image, backup and upgrade", "preparation: pull image and backup", "upgrade only (if already prepared)", "pull image only", coloredExit}, "What do you want to do") {
 			case "all actions: pull image, backup and upgrade":
 				pull, backup, upgrade = true, true, true
 			case "preparation: pull image and backup":

@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# Function to update user information
+function updateUser {
+  # Check if all required arguments are provided
+  if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ] || [ -z "$5" ]; then
+    echo "Error: updateUser command requires five arguments"
+    exit 1
+  fi
+  echo "User.find_by(email:'$1').update(password:'${2:-chemotion}', first_name:'$3', last_name:'$4', type:'Person', name_abbreviation:'$5')" | bundle exec rails c
+}
+
+# Check if a command was provided
+if [ -z "$1" ]; then
+  echo "Error: no command provided"
+  exit 1
+fi
+
+# Check if email exists in database
+if [ "$1" == "emailexist" ]; then
+  # Check if email is provided
+  if [ -z "$2" ]; then
+    echo "Error: email address not provided"
+    exit 1
+  fi
+
+  cd /chemotion/app
+  user=$(echo "User.find_by(email: '$2')" | bundle exec rails c | tail -1)
+
+  if [ "$user" == "nil" ]; then
+    echo "Error: email address does not exist in database"
+    exit 1
+  fi
+  echo " this should run next..."
+  #updateUser "$2" "${3:-chemotion}" "$4" "$5" "$6"
+  exit 0
+fi
+
+# Unknown command
+echo "Error: unknown command $1"
+exit 1

@@ -64,7 +64,7 @@ var backupInstanceRootCmd = &cobra.Command{
 				}
 			} else {
 				if isInteractive(false) {
-					switch selectOpt([]string{"database and data", "database", "data", "exit"}, "What would you like to backup?") {
+					switch selectOpt([]string{"database and data", "database", "data", coloredExit}, "What would you like to backup?") {
 					case "database and data":
 						portion = "both"
 					case "database":

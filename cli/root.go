@@ -88,6 +88,8 @@ var (
 	commandForCLI string = os.Args[0]
 	// call for the compose file -- it calls two file together
 	composeCall = toSprintf("compose -f %s -f %s ", chemotionComposeFilename, cliComposeFilename) // extra space at end is on purpose
+	// to have exit where required
+	coloredExit = color.Color("[red]exit")
 )
 
 // data type that maps a string to corresponding cobra command
@@ -153,7 +155,7 @@ var rootCmd = &cobra.Command{
 			rootCmdTable["instance"] = instanceRootCmd.Run
 			acceptedOpts = append(acceptedOpts, "instance")
 		}
-		acceptedOpts = append(acceptedOpts, []string{"advanced", "exit"}...)
+		acceptedOpts = append(acceptedOpts, []string{"advanced", coloredExit}...)
 		rootCmdTable["advanced"] = advancedRootCmd.Run
 		rootCmdTable[selectOpt(acceptedOpts, "")](cmd, args)
 	},

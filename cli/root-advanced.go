@@ -24,9 +24,9 @@ var advancedRootCmd = &cobra.Command{
 			advancedCmdTable["uninstall"] = uninstallAdvancedRootCmd.Run
 		}
 		if cmd.CalledAs() == "advanced" {
-			acceptedOpts = append(acceptedOpts, "exit")
+			acceptedOpts = append(acceptedOpts, coloredExit)
 		} else {
-			acceptedOpts = append(acceptedOpts, []string{"back", "exit"}...)
+			acceptedOpts = append(acceptedOpts, []string{"back", coloredExit}...)
 			advancedCmdTable["back"] = cmd.Run
 		}
 		advancedCmdTable[selectOpt(acceptedOpts, "")](cmd, args)
