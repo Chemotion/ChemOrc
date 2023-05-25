@@ -13,7 +13,7 @@ services:
       - chemotion
 
   msconvert:
-    image: ptrxyz/chemotion:msconvert-1.5.3
+    image: ptrxyz/chemotion:msconvert-1.5.4
     restart: unless-stopped
     hostname: msconvert
     volumes:
@@ -22,7 +22,7 @@ services:
       - chemotion
 
   spectra:
-    image: ptrxyz/chemotion:spectra-1.5.3
+    image: ptrxyz/chemotion:spectra-1.5.4
     restart: unless-stopped
     hostname: spectra
     volumes:
@@ -33,7 +33,7 @@ services:
       - chemotion
 
   worker:
-    image: ptrxyz/chemotion:eln-1.5.3
+    image: ptrxyz/chemotion:eln-1.5.4
     restart: unless-stopped
     environment:
       - CONFIG_ROLE=worker
@@ -48,7 +48,7 @@ services:
       - chemotion
 
   eln:
-    image: ptrxyz/chemotion:eln-1.5.3
+    image: ptrxyz/chemotion:eln-1.5.4
     restart: unless-stopped
     environment:
       - CONFIG_ROLE=eln
@@ -67,7 +67,7 @@ services:
       - chemotion
 
   ketchersvc:
-    image: ptrxyz/chemotion:ketchersvc-1.5.3
+    image: ptrxyz/chemotion:ketchersvc-1.5.4
     restart: unless-stopped
     environment:
       - CONFIG_KETCHER_URL=http://eln:4000/ketcher/
@@ -79,7 +79,7 @@ services:
       - chemotion
 
   converter:
-    image: ptrxyz/chemotion:converter-1.5.3
+    image: ptrxyz/chemotion:converter-1.5.4
     restart: unless-stopped
     environment:
       - SECRET_KEY=imsupersecretandwanttobechanged

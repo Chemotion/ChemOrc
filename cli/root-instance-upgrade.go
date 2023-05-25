@@ -4,17 +4,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-version"
+	vercompare "github.com/hashicorp/go-version"
 	"github.com/spf13/cobra"
 )
 
 func upgradeRequired() (toUpgrade []string) {
 	if conf.IsSet(joinKey(stateWord, "latest_eln")) {
-		if latestVersion, err := version.NewVersion(conf.GetString(joinKey(stateWord, "latest_eln"))); err == nil {
+		if latestVersion, err := vercompare.NewVersion(conf.GetString(joinKey(stateWord, "latest_eln"))); err == nil {
 			for _, givenName := range allInstances() {
 				_, imageName, _ := strings.Cut(conf.GetString(joinKey(instancesWord, givenName, "image")), "/")
 				if _, imageVersion, found := strings.Cut(imageName, "-"); found {
-					if imVer, err := version.NewVersion(imageVersion); err == nil {
+					if imVer, err := vercompare.NewVersion(imageVersion); err == nil {
 						if latestVersion.GreaterThan(imVer) {
 							toUpgrade = append(toUpgrade, givenName)
 						}
@@ -51,14 +51,14 @@ func instanceUpgrade(givenName, use string) {
 	oldComposeFile := workDir.Join(instancesWord, name, chemotionComposeFilename)
 	oldCompose := parseCompose(oldComposeFile.String())
 	if oldCompose.GetStringSlice(joinKey("services", primaryService, "ports"))[0] != toSprintf("%d:%d", firstPort, firstPort) {
-		if err := changeKey(newComposeFile.String(), joinKey("services", primaryService, "ports[0]"), oldCompose.GetStringSlice(joinKey("services", primaryService, "ports"))[0]); err != nil {
+		if err := changeExposedPort(newComposeFile.String(), oldCompose.GetStringSlice(joinKey("services", primaryService, "ports"))[0][5:]); err != nil {
 			newComposeFile.Remove()
 			zboth.Fatal().Err(err).Msgf("Failed to update the port in downloaded compose file. This is necessary for future use. The file was removed.")
 		}
 	}
 	// backup the old compose file
 	if err := oldComposeFile.Rename(workDir.Join(instancesWord, name, toSprintf("old.%s.%s", time.Now().Format("060102150405"), chemotionComposeFilename))); err == nil {
-		zboth.Info().Msgf("The old compose file is now called %s:", oldComposeFile.String())
+		zboth.Info().Msgf("The old compose file is now called: %s.", oldComposeFile.String())
 	} else {
 		newComposeFile.Remove()
 		zboth.Fatal().Err(err).Msgf("Failed to remove the new compose file. Check log. ABORT!")
@@ -102,7 +102,7 @@ var upgradeInstanceRootCmd = &cobra.Command{
 			upgrade = !pull
 		}
 		if !pull && isInteractive(false) {
-			switch selectOpt([]string{"all actions: pull image, backup and upgrade", "preparation: pull image and backup", "upgrade only (if already prepared)", "pull image only", "exit"}, "What do you want to do") {
+			switch selectOpt([]string{"all actions: pull image, backup and upgrade", "preparation: pull image and backup", "upgrade only (if already prepared)", "pull image only", coloredExit}, "What do you want to do") {
 			case "all actions: pull image, backup and upgrade":
 				pull, backup, upgrade = true, true, true
 			case "preparation: pull image and backup":
