@@ -127,9 +127,6 @@ var rootCmd = &cobra.Command{
 		if toUpgrade := upgradeRequired(); len(toUpgrade) > 0 {
 			zboth.Info().Msgf(color.Color(toSprintf("[red][bold]The following instance(s) can be upgraded: %s.", strings.Join(toUpgrade, ", "))))
 		}
-		if toUpgrade := upgradeRequired(); len(toUpgrade) > 0 {
-			zboth.Info().Msgf("%s%sThe following instance(s) can be upgraded: %s.%s", string("\033[34m"), string("\033[1m"), strings.Join(toUpgrade, ", "), string("\033[0m"))
-		}
 		if strings.Contains(versionCLI, "pre") {
 			zboth.Warn().Msgf("This is a pre-release version. Do not use this in production.")
 		}
