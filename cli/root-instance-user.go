@@ -114,7 +114,7 @@ var userInstanceRootCmd = &cobra.Command{
 	Use:       "user",
 	Aliases:   []string{"users"},
 	Short:     "Manage user such as create, add, update and remove user and reset password for " + nameCLI,
-	ValidArgs: []string{"create", "list", "update", "delete"},
+	ValidArgs: []string{"create", "list", "update", "describe", "delete"},
 	Run: func(cmd *cobra.Command, args []string) {
 		var selected string
 		if ownCall(cmd) {
@@ -179,9 +179,9 @@ var userInstanceRootCmd = &cobra.Command{
 		case coloredExit:
 			os.Exit(0)
 		case "multiple arguments":
-			zboth.Warn().Msgf("console expects only ONE argument of the following: %s.", strings.Join(cmd.ValidArgs, ", "))
+			zboth.Warn().Msgf("user subcommand expects only ONE argument of the following: %s.", strings.Join(cmd.ValidArgs, ", "))
 		default:
-			zboth.Info().Msgf("console expects one of the following: %s.", strings.Join(cmd.ValidArgs, ", "))
+			zboth.Info().Msgf("user subcommand expects one of the following: %s.", strings.Join(cmd.ValidArgs, ", "))
 		}
 	},
 }

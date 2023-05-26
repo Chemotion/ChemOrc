@@ -8,6 +8,7 @@ import (
 
 	"github.com/cavaliergopher/grab/v3"
 	"github.com/chigopher/pathlib"
+	"github.com/spf13/viper"
 )
 
 // debug level logging of where we are running at the moment
@@ -40,7 +41,10 @@ func writeConfig(firstRun bool) (err error) {
 		conf.Set(joinKey(stateWord, "debug"), false)
 		conf.Set(joinKey(stateWord, "version"), versionCLI)
 	} else { // backup values
-		oldConf := parseCompose(conf.ConfigFileUsed())
+		oldConf, err := readYAML(conf.ConfigFileUsed())
+		if err != nil {
+			zboth.Fatal().Err(err).Msgf("Failed to read in the existing config file, cannot overwrite it.")
+		}
 		for _, key := range keysToPreserve {
 			preserve[key] = conf.GetBool(key)   // backup key into memory
 			conf.Set(key, oldConf.GetBool(key)) // set conf's key to what is read from existing file
@@ -87,6 +91,15 @@ func copyfile(source, destination string) (err error) {
 	if err == nil {
 		err = pathlib.NewPath(destination).WriteFile(read)
 	}
+	return
+}
+
+// to read in a YAML file
+func readYAML(filepath string) (yamlFile viper.Viper, err error) {
+	// parse the compose file
+	yamlFile = *viper.New()
+	yamlFile.SetConfigFile(filepath)
+	err = yamlFile.ReadInConfig()
 	return
 }
 
@@ -142,10 +155,13 @@ func execShell(command string) (result []byte, err error) {
 func changeExposedPort(filename string, newPort string) (err error) {
 	if existingFile(filename) {
 		var result []byte
-		//if success := callVirtualizer(toSprintf("run --rm -v %s:/workdir mikefarah/yq eval -i .%s=\"%s\" %s", where, key, value, filename)); !success {
-		if result, err = execShell(toSprintf("cat %s | %s run -i --rm mikefarah/yq '.%s |= sub(\"%d:\", \"%s:\")'", filename, virtualizer, joinKey("services", "eln", "ports[0]"), firstPort, newPort)); err == nil {
-			yamlFile := pathlib.NewPath(filename)
-			err = yamlFile.WriteFile(result)
+		if callVirtualizer("pull mikefarah/yq") {
+			if result, err = execShell(toSprintf("cat %s | %s run -i --rm mikefarah/yq '.%s |= sub(\"%d:\", \"%s:\")'", filename, virtualizer, joinKey("services", "eln", "ports[0]"), firstPort, newPort)); err == nil {
+				yamlFile := pathlib.NewPath(filename)
+				err = yamlFile.WriteFile(result)
+			}
+		} else {
+			zboth.Fatal().Err(toError("failed to pull `yq`")).Msgf("Failed to pull `yq` image.")
 		}
 	} else {
 		err = toError("file %s not found", filename)

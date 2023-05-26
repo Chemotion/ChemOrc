@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chigopher/pathlib"
 	vercompare "github.com/hashicorp/go-version"
 	"github.com/spf13/cobra"
 )
@@ -42,16 +43,30 @@ func pullImages(use string) {
 
 func instanceUpgrade(givenName, use string) {
 	var success bool = true
+	var newComposeFile pathlib.Path
 	name := getInternalName(givenName)
-	// download the new compose (in the working directory)
-	newComposeFile := downloadFile(composeURL, workDir.String())
+	// download or copy the new compose
+	if existingFile(use) {
+		dest := workDir.Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename))
+		if err := copyfile(use, dest.String()); err == nil {
+			newComposeFile = *dest
+		} else {
+			zboth.Fatal().Err(err).Msgf("Failed to copy the suggested compose file: %s. This is necessary for future use.")
+		}
+	} else {
+		newComposeFile = downloadFile(use, workDir.Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename)).String())
+	}
+	// get name of new image, and do a kind-of sanity check on the proposed file
 	newCompose := parseCompose(newComposeFile.String())
 	newImage := newCompose.GetString(joinKey("services", primaryService, "image"))
+	if newImage == "" {
+		zboth.Fatal().Err(toError("not understood compose file")).Msgf("Failed to identify %s image in the compose file.", primaryService)
+	}
 	// get port from old compose
 	oldComposeFile := workDir.Join(instancesWord, name, chemotionComposeFilename)
 	oldCompose := parseCompose(oldComposeFile.String())
 	if oldCompose.GetStringSlice(joinKey("services", primaryService, "ports"))[0] != toSprintf("%d:%d", firstPort, firstPort) {
-		if err := changeExposedPort(newComposeFile.String(), oldCompose.GetStringSlice(joinKey("services", primaryService, "ports"))[0][5:]); err != nil {
+		if err := changeExposedPort(newComposeFile.String(), oldCompose.GetStringSlice(joinKey("services", primaryService, "ports"))[0][:4]); err != nil {
 			newComposeFile.Remove()
 			zboth.Fatal().Err(err).Msgf("Failed to update the port in downloaded compose file. This is necessary for future use. The file was removed.")
 		}
@@ -60,21 +75,36 @@ func instanceUpgrade(givenName, use string) {
 	if err := oldComposeFile.Rename(workDir.Join(instancesWord, name, toSprintf("old.%s.%s", time.Now().Format("060102150405"), chemotionComposeFilename))); err == nil {
 		zboth.Info().Msgf("The old compose file is now called: %s.", oldComposeFile.String())
 	} else {
-		newComposeFile.Remove()
-		zboth.Fatal().Err(err).Msgf("Failed to remove the new compose file. Check log. ABORT!")
+		if errRemove := newComposeFile.Remove(); errRemove != nil {
+			zboth.Warn().Err(err).Msgf("Failed to create backup of the old compose file.")
+			zboth.Fatal().Err(errRemove).Msgf("Failed to remove the new compose file. Check log. ABORT!")
+		}
+		zboth.Fatal().Err(err).Msgf("Failed to create backup of the old compose file.")
 	}
+	// move the new file in place of the old one
 	if err := newComposeFile.Rename(workDir.Join(instancesWord, name, chemotionComposeFilename)); err != nil {
-		zboth.Fatal().Err(err).Msgf("Failed to rename the new compose file: %s. Check log. ABORT!", newComposeFile.String())
-	}
-	// shutdown existing instance's docker
-	if _, success, _ = gotoFolder(givenName), callVirtualizer(composeCall+"down --remove-orphans"), gotoFolder("workdir"); !success {
-		zboth.Fatal().Err(toError("compose down failed")).Msgf("Failed to stop %s. Check log. ABORT!", givenName)
-	}
-	if success {
-		if _, success, _ = gotoFolder(givenName), callVirtualizer(toSprintf("volume rm %s_chemotion_app", name)), gotoFolder("workdir"); !success {
-			zboth.Fatal().Err(toError("volume removal failed")).Msgf("Failed to remove old app volume. Check log. ABORT!")
+		if errRestore := oldComposeFile.Rename(workDir.Join(instancesWord, name, chemotionComposeFilename)); errRestore == nil {
+			zboth.Fatal().Err(err).Msgf("Failed to rename the new compose file: %s. Check log. ABORT!", newComposeFile.String())
+		} else {
+			zboth.Warn().Err(err).Msgf("Failed to rename the new compose file: %s.", newComposeFile.String())
+			zboth.Fatal().Err(errRestore).Msgf("Failed to restore the old compose file %s. Instance will fail to restart. Rename it manually. ABORT!", oldComposeFile.String())
 		}
 	}
+	var err error = nil
+	var msg string
+	// shutdown existing instance's docker
+	if _, success, _ = gotoFolder(givenName), callVirtualizer(composeCall+"down --remove-orphans"), gotoFolder("workdir"); !success {
+		err = toError("compose down failed")
+		msg = toSprintf("Failed to stop %s. Check log. ABORT!", givenName)
+	}
+	// remove the existing volume
+	if success {
+		if _, success, _ = gotoFolder(givenName), callVirtualizer(toSprintf("volume rm %s_chemotion_app", name)), gotoFolder("workdir"); !success {
+			err = toError("volume removal failed")
+			msg = "Failed to remove old app volume. Check log. ABORT!"
+		}
+	}
+	// build the new container and update the config file
 	if success {
 		commandStr := toSprintf(composeCall + "up --no-start")
 		zboth.Info().Msgf("Starting %s with command: %s", virtualizer, commandStr)
@@ -83,9 +113,17 @@ func instanceUpgrade(givenName, use string) {
 			writeConfig(false)
 			zboth.Info().Msgf("Instance upgraded successfully!")
 		} else {
-			zboth.Fatal().Err(toError("%s failed", commandStr)).Msgf("Failed to initialize upgraded %s. Check log. ABORT!", givenName)
+			err = toError("%s failed", commandStr)
+			msg = toSprintf("Failed to initialize upgraded %s. Check log. ABORT!", givenName)
 		}
-
+	}
+	if err != nil {
+		if errRestore := oldComposeFile.Rename(workDir.Join(instancesWord, name, chemotionComposeFilename)); errRestore == nil {
+			zboth.Fatal().Err(err).Msg(msg)
+		} else {
+			zboth.Warn().Err(err).Msgf(msg)
+			zboth.Fatal().Err(errRestore).Msgf("Failed to restore the old compose file %s. Instance will fail to restart. Rename it manually. ABORT!", oldComposeFile.String())
+		}
 	}
 }
 
@@ -94,7 +132,7 @@ var upgradeInstanceRootCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Short: "Upgrade (the selected) instance of " + nameCLI,
 	Run: func(cmd *cobra.Command, _ []string) {
-		var pull, backup, upgrade bool = false, false, true
+		var pull, backup, stop, upgrade bool = false, false, false, true
 		var use string = composeURL
 		if ownCall(cmd) {
 			use = cmd.Flag("use").Value.String()
@@ -104,13 +142,13 @@ var upgradeInstanceRootCmd = &cobra.Command{
 		if !pull && isInteractive(false) {
 			switch selectOpt([]string{"all actions: pull image, backup and upgrade", "preparation: pull image and backup", "upgrade only (if already prepared)", "pull image only", coloredExit}, "What do you want to do") {
 			case "all actions: pull image, backup and upgrade":
-				pull, backup, upgrade = true, true, true
+				pull, backup, stop, upgrade = true, true, true, true
 			case "preparation: pull image and backup":
-				pull, backup, upgrade = true, true, false
+				pull, backup, stop, upgrade = true, true, false, false
 			case "upgrade only (if already prepared)":
-				pull, backup, upgrade = false, false, true
+				pull, backup, stop, upgrade = false, false, false, true
 			case "pull image only":
-				pull, backup, upgrade = true, false, false
+				pull, backup, stop, upgrade = true, false, false, false
 			}
 		}
 		if pull {
@@ -118,6 +156,9 @@ var upgradeInstanceRootCmd = &cobra.Command{
 		}
 		if backup {
 			instanceBackup(currentInstance, "both")
+		}
+		if stop {
+			instanceStop(currentInstance)
 		}
 		if upgrade {
 			if instanceStatus(currentInstance) == "Up" {
