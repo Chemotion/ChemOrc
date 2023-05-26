@@ -6,10 +6,11 @@ ChemCLI, short for Chemotion CLI, is a tool to help you manage Chemotion ELN on 
 
 ChemCLI tool supports the following versions of Chemotion ELN:
 
-| ELN Version                                                            | `docker-compose.yml` file                                                                                                   | Supported by chemCLI version                                           |
-| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| [v1.5.1](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.5.1) | [eln-1.5.1](https://raw.githubusercontent.com/ptrxyz/chemotion/44399a444948a99ddd50ecbea0fbcb84d159f2cc/docker-compose.yml) | [0.2.x](https://github.com/Chemotion/ChemCLI/releases/tag/0.2.2)       |
-| [v1.3.1](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.3.1) | [eln-1.3.1p220712](https://github.com/ptrxyz/chemotion/blob/cb906ce8d37e0a173ae66b3696a9f039f540eace/docker-compose.yml)    | [0.1.x](https://github.com/Chemotion/ChemCLI/releases/tag/0.1.6-alpha) |
+| ELN Version                                                            | `docker-compose.yml` file                                                                                                                   | Supported by chemCLI version                                                                                                          |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| [v1.6.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.6.0) | [eln-1.6.0](https://raw.githubusercontent.com/Chemotion/ChemCLI/2b59c2ee120fd6ac3c243fe4e71b31f82c1c9339/payload/docker-compose.yml)        | [0.2.x](https://github.com/Chemotion/ChemCLI/releases/latest)                                                                         |
+| [v1.5.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.5.4) | [eln-1.5.4](https://raw.githubusercontent.com/Chemotion/ChemCLI/548ead617a552307f30d5051e72c01d95e99b30f/payload/docker-compose.yml)        | [0.2.x](https://github.com/Chemotion/ChemCLI/releases/latest)                                                                         |
+| [v1.3.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.3.1) | [eln-1.3.1p220712](https://raw.githubusercontent.com/Chemotion/ChemCLI/0e18f51543ebc111a091db15db8a43487b7f3e19/payload/docker-compose.yml) | [0.2.x](https://github.com/Chemotion/ChemCLI/releases/latest), [0.1.x](https://github.com/Chemotion/ChemCLI/releases/tag/0.1.6-alpha) |
 
 > Chemotion ELN version [1.4.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.4.1-3) is **not supported** because it requires [manual changes](https://chemotion.net/docs/eln/install_configure/manual_install#only-when-installing-or-upgrading-to-version-141) to the installation after downloading the [`docker-compose.yml`](https://raw.githubusercontent.com/ptrxyz/chemotion/ba4b4620ab2aaa6be32df78189c29970335b1989/docker-compose.yml) file.
 
@@ -32,12 +33,7 @@ Following features have been implemented:
 - ✔ Restore: `./chemCLI` > `instance` > `restore` to save the data associated with an instance into a new instance.
 - ✔ Multiple instances: `./chemCLI` > `instance` > `new|list|switch|remove` can be used to manage multiple instances.
 - ✔ Administrative consoles: `./chemCLI` > `instance` > `consoles` > `<console_name>` to drop into `shell`, `postgreSQL` and `rails` consoles.
-
-Following features are under consideration planned:
-
-- Manage Settings: `./chemCLI instance settings` to configure settings of an instance and to assist with auto-configuring wizards.
-- A GUI interface to monitor instances being run.
-- Have another feature in mind: [Open an issue](https://github.com/Chemotion/ChemCLI/issues) or contact our [helpdesk](https://chemotion.net/helpdesk)!
+- ✔ Users: `./chemCLI` > `instance` > `users` > `create|list|update|describe|delete` to manage users in an instance. Particularly, `./chemCLI` > `instance` > `users` > `update` can be used to modify password for users who forget theirs.
 
 ## Download
 
@@ -52,16 +48,18 @@ The ChemCLI tool is a binary file called `chemCLI` and needs no installation. Th
 
 Please be sure that you have both, `docker` and `docker compose` commands. This should be the case if you install Docker Desktop following the instructions [here](https://docs.docker.com/desktop/#download-and-install). If you choose to install only Docker Engine, then please make sure that you **also** have `docker compose` as a command (as opposed to `docker-compose`). On Linux, you might have to install the [`docker-compose-plugin`](https://docs.docker.com/compose/install/linux/#install-using-the-repository) to achieve this.
 
-These binary builds rely on libraries of the underlying operating system: if they do not work on your system for some reason, please create an [issue here](https://github.com/Chemotion/ChemCLI/issues) and we will try to provide you a binary build as soon as possible. If you feel like it, you can always compile the `go` source code on your own.
+These binary builds should not rely on libraries of the underlying operating system: if they still do not work on your system for some reason, please create an [issue here](https://github.com/Chemotion/ChemCLI/issues) and we will try to provide you a binary build as soon as possible. If you feel like it, you can always compile the `go` source code on your own.
 
 ### Making it an executable
 
 | OS                       | How to make it an executable | How to run the executable |
 | ------------------------ | :--------------------------: | ------------------------- |
 | Linux (Ubuntu, WSL etc.) |     `chmod u+x chemCLI`      | `./chemCLI`               |
-| Windows (Powershell)     |       (nothing to do)        | `.\chemCLI.exe`           |
+| Windows (Powershell)\*   |       (nothing to do)        | `.\chemCLI.exe`           |
 | macOS (intel/amd64)^     | `chmod u+x chemCLI.amd.osx`  | `./chemCLI.amd.osx`       |
 | macOS (apple-silicon)^   | `chmod u+x chemCLI.arm.osx`  | `./chemCLI.arm.osx`       |
+
+\*On Windows, it is recommended to use [Powershell 7](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell) instead of the one provided natively ([confusingly called Windows Powershell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell)). In any case, it is necessary to have `pwsh` in your `$PATH`.
 
 ^On macOS, if the there is a security pop-up when running the command, please also `Allow` the executable in `System Preferences > Security & Privacy`.
 
@@ -141,8 +139,10 @@ chemCLI has a lot to offer, with a few advanced features available exclusively v
 
 A particular construct worth noting is using the `./chemCLI instance restore` command to create the **first** instance while restoring data from a previous instance into it. This can be useful for moving from non-docker and/or non-chemCLI based installations to a chemCLI managed installation.
 
+For example:
+
 ```bash
-./chemCLI instance restore --name first-instance --data /absolute/path/to/backup.data.tar.gz --db /absolute/path/to/backup.sql.gz --address https://chemotion.myuni.de
+./chemCLI instance restore --name first-instance --data /absolute/path/to/backup.data.tar.gz --db /absolute/path/to/backup.sql.gz --suffix 4cfcfd0c --address https://chemotion.myuni.de --use https://github.com/Chemotion/ChemCLI/releases/download/0.2.7/docker-compose.yml
 ```
 
 ### Silent and Debug Use
@@ -164,4 +164,4 @@ Similarly, the CLI can be run in Debug mode when you encounter an error. This pr
 ## Known limitations and bugs
 
 - `./chemCLI off`: does not lead to exit of containers with exit code 0.
-- Everything happens in the folder (and subfolders) where `./chemCLI` is executed. All files and folders are expected to be there; otherwise failures can happen.
+- Everything happens in the folder (and subfolders) where `./chemCLI` is executed. All files and folders are expected to be there; otherwise failures can happen. The user executing ChemCLI is expected to have all file permissions for this folder.

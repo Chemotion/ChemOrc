@@ -11,15 +11,16 @@ import (
 	"github.com/spf13/viper"
 )
 
-// helper to get a compose (or YAML) file
+// helper to get a compose file
 func parseCompose(use string) (compose viper.Viper) {
 	var (
 		composeFilepath pathlib.Path
 		isUrl           bool
+		err             error
 	)
 	if existingFile(use) {
 		composeFilepath = *pathlib.NewPath(use)
-	} else if _, err := url.ParseRequestURI(use); err == nil {
+	} else if _, err = url.ParseRequestURI(use); err == nil {
 		isUrl = true
 		composeFilepath = downloadFile(use, pathlib.NewPath(".").Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename)).String()) // downloads to where-ever it is called from
 	} else {
@@ -29,10 +30,7 @@ func parseCompose(use string) (compose viper.Viper) {
 			zboth.Fatal().Err(err).Msgf("Failed: %s file not found.", use)
 		}
 	}
-	// parse the compose file
-	compose = *viper.New()
-	compose.SetConfigFile(composeFilepath.String())
-	err := compose.ReadInConfig()
+	compose, err = readYAML(composeFilepath.String())
 	if isUrl {
 		composeFilepath.Remove()
 	}
@@ -152,7 +150,7 @@ func instanceCreateProduction(details map[string]string) (success bool) {
 		composeFile = downloadFile(details["use"], workDir.Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename)).String())
 	}
 	if port != firstPort {
-		if err := changeKey(composeFile.String(), joinKey("services", "eln", "ports[0]"), toSprintf("%d:%s", firstPort, details["port"])); err != nil {
+		if err := changeExposedPort(composeFile.String(), details["port"]); err != nil {
 			composeFile.Remove()
 			zboth.Fatal().Err(err).Msgf("Failed to update the downloaded compose file. This is necessary for future use.")
 		}
@@ -196,7 +194,7 @@ func instanceCreateProduction(details map[string]string) (success bool) {
 
 // interaction when creating a new instance
 func processInstanceCreateCmd(cmd *cobra.Command, details map[string]string) (create bool) {
-	askName, askAddress, askDevelopment := true, true, false
+	askName, askAddress, askDevelopment, askUse := true, true, false, true
 	create = true
 	details["accessAddress"] = addressDefault
 	details["kind"] = "Production"
@@ -222,6 +220,7 @@ func processInstanceCreateCmd(cmd *cobra.Command, details map[string]string) (cr
 		}
 		if cmd.Flag("use").Changed {
 			details["use"] = cmd.Flag("use").Value.String()
+			askUse = false
 		}
 		if cmd.Flag("development") == nil {
 			askDevelopment = false
@@ -240,6 +239,18 @@ func processInstanceCreateCmd(cmd *cobra.Command, details map[string]string) (cr
 		if create {
 			if askName {
 				details["givenName"] = getString("Please enter the name of the instance you want to create", newInstanceValidate)
+			}
+			if askUse {
+				switch selectOpt([]string{"latest - 1.6.0", "1.5.4", "1.5.3"}, "Select the version of ELN you want to install") {
+				case "1.6.0":
+					details["use"] = composeURL
+				case "1.5.4":
+					details["use"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/548ead617a552307f30d5051e72c01d95e99b30f/payload/docker-compose.yml"
+				case "1.5.3":
+					details["use"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/5bacb0c83342ec1bb675057cbbca8e9f761236e9/payload/docker-compose.yml"
+				default:
+					details["use"] = composeURL
+				}
 			}
 			if askAddress {
 				if selectYesNo("Is this instance having its own web-address (e.g. https://chemotion.uni.de or http://chemotion.uni.de:4100)?", false) {

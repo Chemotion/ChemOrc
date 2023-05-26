@@ -36,6 +36,7 @@ import (
 	"strings"
 
 	"github.com/chigopher/pathlib"
+	color "github.com/mitchellh/colorstring"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -67,7 +68,7 @@ const (
 // configuration and logging
 var (
 	// version number, here to allow override
-	versionCLI = "0.2.5"
+	versionCLI = "0.2.7"
 	// current shell
 	shell string
 	// currently selected instance
@@ -87,6 +88,8 @@ var (
 	commandForCLI string = os.Args[0]
 	// call for the compose file -- it calls two file together
 	composeCall = toSprintf("compose -f %s -f %s ", chemotionComposeFilename, cliComposeFilename) // extra space at end is on purpose
+	// to have exit where required
+	coloredExit = color.Color("[red]exit")
 )
 
 // data type that maps a string to corresponding cobra command
@@ -113,13 +116,16 @@ var rootCmd = &cobra.Command{
 		zboth.Info().Msgf("Welcome to %s! You are on a host machine.", nameCLI)
 		if currentInstance != "" {
 			if err := instanceValidate(currentInstance); err == nil {
-				zboth.Info().Msgf("The instance you are currently managing is %s%s%s%s.", string("\033[31m"), string("\033[1m"), currentInstance, string("\033[0m"))
+				zboth.Info().Msgf("The instance you are currently managing is %s.", color.Color(toSprintf("[green]%s", currentInstance)))
 			} else {
 				zboth.Fatal().Err(err).Msgf(err.Error())
 			}
 		}
 		if updateRequired(false) {
-			zboth.Info().Msgf("%s%sThere is a new version of %s available.%s", string("\033[34m"), string("\033[1m"), nameCLI, string("\033[0m"))
+			zboth.Info().Msgf(color.Color(toSprintf("[yellow][bold]There is a new version of %s available.", nameCLI)))
+		}
+		if toUpgrade := upgradeRequired(); len(toUpgrade) > 0 {
+			zboth.Info().Msgf(color.Color(toSprintf("[red][bold]The following instance(s) can be upgraded: %s.", strings.Join(toUpgrade, ", "))))
 		}
 		if toUpgrade := upgradeRequired(); len(toUpgrade) > 0 {
 			zboth.Info().Msgf("%s%sThe following instance(s) can be upgraded: %s.%s", string("\033[34m"), string("\033[1m"), strings.Join(toUpgrade, ", "), string("\033[0m"))
@@ -152,7 +158,7 @@ var rootCmd = &cobra.Command{
 			rootCmdTable["instance"] = instanceRootCmd.Run
 			acceptedOpts = append(acceptedOpts, "instance")
 		}
-		acceptedOpts = append(acceptedOpts, []string{"advanced", "exit"}...)
+		acceptedOpts = append(acceptedOpts, []string{"advanced", coloredExit}...)
 		rootCmdTable["advanced"] = advancedRootCmd.Run
 		rootCmdTable[selectOpt(acceptedOpts, "")](cmd, args)
 	},
