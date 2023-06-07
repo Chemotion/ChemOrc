@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// check if the CLI is running interactively; if no and fail, then exit. Wrapper around conf.GetBool(joinKey(stateWord,"quiet")).
+// check if the CLI is running interactively; if interactive == true && fail == true, then exit. Wrapper around conf.GetBool(joinKey(stateWord,"quiet")).
 func isInteractive(fail bool) (interactive bool) {
 	interactive = true
 	if isInContainer {
@@ -42,9 +42,9 @@ func getNewUniqueID() string {
 	return strings.Split(id.String(), "-")[0]
 }
 
-// to manage config files as loaded into Viper
-func getSubHeadings(configuration *viper.Viper, key string) (subheadings []string) {
-	for k := range configuration.GetStringMapString(key) {
+// to manage config as loaded into Viper
+func getSubHeadings(yamlConf *viper.Viper, key string) (subheadings []string) {
+	for k := range yamlConf.GetStringMapString(key) {
 		subheadings = append(subheadings, k)
 	}
 	return
@@ -70,8 +70,7 @@ func toBool(s string) (value bool) {
 	} else if toLower(s) == "false" {
 		value = false
 	} else {
-		err := toError("cannot convert %s to bool", s)
-		zboth.Fatal().Err(err).Msgf(err.Error())
+		zboth.Fatal().Msgf("cannot convert %s to bool", s)
 	}
 	return
 }
@@ -116,8 +115,6 @@ func getColumn(givenName, column, service string) (values []string) {
 	}
 	if res, err := execShell(toSprintf("%s ps -a %s --format \"{{.%s}}\"", virtualizer, filterStr, column)); err == nil {
 		values = strings.Split(string(res), "\n")
-	} else {
-		values = []string{}
 	}
 	return
 }
@@ -148,16 +145,18 @@ func getServices(givenName string) (services []string) {
 // }
 
 // split address into subcomponents
-func splitAddress(full string) (protocol string, address string, port uint64) {
-	if err := addressValidate(full); err != nil {
-		zboth.Fatal().Err(err).Msgf("Given address %s is invalid.", full)
-	}
-	protocol, address, _ = strings.Cut(full, ":")
-	address = strings.TrimPrefix(address, "//")
-	address, portStr, _ := strings.Cut(address, ":")
-	if port = 0; portStr != "" {
-		p, _ := strconv.Atoi(portStr)
-		port = uint64(p)
+func splitAddress(address string) (protocol string, domain string, port uint64) {
+	if err := addressValidate(address); err == nil {
+		var portStr string
+		protocol, address, _ = strings.Cut(address, ":")
+		address = strings.TrimPrefix(address, "//")
+		domain, portStr, _ = strings.Cut(address, ":")
+		if port = 0; portStr != "" {
+			p, _ := strconv.Atoi(portStr)
+			port = uint64(p)
+		}
+	} else {
+		zboth.Fatal().Err(err).Msgf("Given address %s is invalid.", address)
 	}
 	return
 }
