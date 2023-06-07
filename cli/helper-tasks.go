@@ -42,7 +42,7 @@ func upgradeThisTool(transition string) (success bool) {
 				if !existingFile(workDir.Join(instancesWord, name, cliComposeFilename).String()) {
 					extendedCompose := createExtendedCompose(details, workDir.Join(instancesWord, name, chemotionComposeFilename).String())
 					// write out the extended compose file
-					if _, err, _ := gotoFolder(givenName), extendedCompose.WriteConfigAs(cliComposeFilename), gotoFolder("workdir"); err == nil {
+					if _, err, _ := gotoFolder(givenName), extendedCompose.WriteConfigAs(cliComposeFilename), gotoFolder("work.dir"); err == nil {
 						zboth.Info().Msgf("Written extended file %s in the above step.", cliComposeFilename)
 					} else {
 						zboth.Fatal().Err(err).Msgf("Failed to write the extended compose file to its repective folder. This is necessary for future use.")

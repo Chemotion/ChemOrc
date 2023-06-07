@@ -26,7 +26,7 @@ func instanceBackup(givenName, portion string) {
 		zboth.Debug().Msgf(output)
 		backupFile.Remove()
 	}
-	if _, successBackUp, _ := gotoFolder(givenName), callVirtualizer(composeCall+calledCmd), gotoFolder("workdir"); successBackUp {
+	if _, successBackUp, _ := gotoFolder(givenName), callVirtualizer(composeCall+calledCmd), gotoFolder("work.dir"); successBackUp {
 		zboth.Info().Msgf("Backup successful.")
 	} else {
 		zboth.Fatal().Err(toError("backup failed")).Msgf("Backup process failed.")
@@ -68,7 +68,7 @@ var backupInstanceRootCmd = &cobra.Command{
 			}
 			instanceBackup(currentInstance, portion)
 			if elementInSlice(status, &[]string{"Exited", "Created"}) != -1 { // i.e. status == "Exited" || status == "Created"
-				_, _, _ = gotoFolder(currentInstance), callVirtualizer(composeCall+"stop"), gotoFolder("workdir")
+				_, _, _ = gotoFolder(currentInstance), callVirtualizer(composeCall+"stop"), gotoFolder("work.dir")
 			}
 		} else {
 			zboth.Debug().Msgf("Backup operation cancelled.")

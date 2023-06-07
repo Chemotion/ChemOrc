@@ -104,7 +104,7 @@ func readYAML(filepath string) (yamlFile viper.Viper, err error) {
 // change directory with logging
 func gotoFolder(givenName string) (pwd string) {
 	var folder string
-	if givenName == "workdir" {
+	if givenName == "work.dir" {
 		folder = "../.."
 	} else {
 		folder = workDir.Join(instancesWord, getInternalName(givenName)).String()

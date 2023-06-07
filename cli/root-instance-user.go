@@ -11,7 +11,7 @@ import (
 func runRailsCommand(givenName, service, command string) (output string) {
 	gotoFolder(givenName)
 	bOutput, err := execShell(toSprintf("%s compose exec --workdir /chemotion/app %s bash -c \"echo \\\"%s\\\" | bundle exec rails c\"", virtualizer, service, command))
-	gotoFolder("workdir")
+	gotoFolder("work.dir")
 	if err == nil {
 		outputLines := strings.Split(string(bOutput), "\n")
 		for outputStartsAt := range outputLines {

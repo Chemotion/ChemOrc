@@ -93,13 +93,13 @@ func instanceUpgrade(givenName, use string) {
 	var err error = nil
 	var msg string
 	// shutdown existing instance's docker
-	if _, success, _ = gotoFolder(givenName), callVirtualizer(composeCall+"down --remove-orphans"), gotoFolder("workdir"); !success {
+	if _, success, _ = gotoFolder(givenName), callVirtualizer(composeCall+"down --remove-orphans"), gotoFolder("work.dir"); !success {
 		err = toError("compose down failed")
 		msg = toSprintf("Failed to stop %s. Check log. ABORT!", givenName)
 	}
 	// remove the existing volume
 	if success {
-		if _, success, _ = gotoFolder(givenName), callVirtualizer(toSprintf("volume rm %s_chemotion_app", name)), gotoFolder("workdir"); !success {
+		if _, success, _ = gotoFolder(givenName), callVirtualizer(toSprintf("volume rm %s_chemotion_app", name)), gotoFolder("work.dir"); !success {
 			err = toError("volume removal failed")
 			msg = "Failed to remove old app volume. Check log. ABORT!"
 		}
@@ -108,7 +108,7 @@ func instanceUpgrade(givenName, use string) {
 	if success {
 		commandStr := toSprintf(composeCall + "up --no-start")
 		zboth.Info().Msgf("Starting %s with command: %s", virtualizer, commandStr)
-		if _, success, _ = gotoFolder(givenName), callVirtualizer(commandStr), gotoFolder("workdir"); success {
+		if _, success, _ = gotoFolder(givenName), callVirtualizer(commandStr), gotoFolder("work.dir"); success {
 			conf.Set(joinKey(instancesWord, givenName, "image"), newImage)
 			writeConfig(false)
 			zboth.Info().Msgf("Instance upgraded successfully!")
