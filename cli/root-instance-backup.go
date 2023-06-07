@@ -24,7 +24,6 @@ func instanceBackup(givenName, portion string) {
 			}
 		}
 		zboth.Debug().Msgf(output)
-		// calledCmd = toSprintf("--profile execution run --volume type=bind,source:%s/%s,target=/embed/scripts/backup.sh --rm -e BACKUP_WHAT=%s executor chemotion backup", backupDir, backupFile.Name(), portion)
 		backupFile.Remove()
 	}
 	if _, successBackUp, _ := gotoFolder(givenName), callVirtualizer(composeCall+calledCmd), gotoFolder("workdir"); successBackUp {
@@ -32,7 +31,6 @@ func instanceBackup(givenName, portion string) {
 	} else {
 		zboth.Fatal().Err(toError("backup failed")).Msgf("Backup process failed.")
 	}
-
 }
 
 var backupInstanceRootCmd = &cobra.Command{
@@ -41,12 +39,6 @@ var backupInstanceRootCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, _ []string) {
 		backup, status := true, instanceStatus(currentInstance)
-		if status == "Up" {
-			zboth.Warn().Err(toError("instance running")).Msgf("The instance called %s is running. Backing up a running instance is not a good idea.", currentInstance)
-			if isInteractive(false) {
-				backup = selectYesNo("Continue", false)
-			}
-		}
 		if status == "Created" {
 			zboth.Warn().Err(toError("instance never run")).Msgf("The instance called %s was created but never turned on. Backing up such an instance is not a good idea.", currentInstance)
 			if isInteractive(false) {
@@ -75,7 +67,7 @@ var backupInstanceRootCmd = &cobra.Command{
 				}
 			}
 			instanceBackup(currentInstance, portion)
-			if status != "Up" {
+			if elementInSlice(status, &[]string{"Exited", "Created"}) != -1 { // i.e. status == "Exited" || status == "Created"
 				_, _, _ = gotoFolder(currentInstance), callVirtualizer(composeCall+"stop"), gotoFolder("workdir")
 			}
 		} else {

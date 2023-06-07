@@ -144,7 +144,7 @@ func instanceCreateProduction(details map[string]string) (success bool) {
 		if err := copyfile(details["use"], dest.String()); err == nil {
 			composeFile = *dest
 		} else {
-			zboth.Fatal().Err(err).Msgf("Failed to copy the suggested compose file: %s. This is necessary for future use.")
+			zboth.Fatal().Err(err).Msgf("Failed to copy the suggested compose file: %s. This is necessary for future use.", details["use"])
 		}
 	} else {
 		composeFile = downloadFile(details["use"], workDir.Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename)).String())

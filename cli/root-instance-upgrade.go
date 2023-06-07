@@ -51,7 +51,7 @@ func instanceUpgrade(givenName, use string) {
 		if err := copyfile(use, dest.String()); err == nil {
 			newComposeFile = *dest
 		} else {
-			zboth.Fatal().Err(err).Msgf("Failed to copy the suggested compose file: %s. This is necessary for future use.")
+			zboth.Fatal().Err(err).Msgf("Failed to copy the suggested compose file: %s. This is necessary for future use.", use)
 		}
 	} else {
 		newComposeFile = downloadFile(use, workDir.Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename)).String())
@@ -161,8 +161,9 @@ var upgradeInstanceRootCmd = &cobra.Command{
 			instanceStop(currentInstance)
 		}
 		if upgrade {
-			if instanceStatus(currentInstance) == "Up" {
-				zboth.Fatal().Err(toError("upgrade fail; instance is up")).Msgf("Cannot upgrade an instance that is currently running. Please turn it off before continuing.")
+			status := instanceStatus(currentInstance)
+			if elementInSlice(status, &[]string{"Exited", "Created"}) == -1 {
+				zboth.Fatal().Err(toError("upgrade fail; instance is %s", status)).Msgf("Cannot upgrade an instance that is not properly shut down. Please turn it off before continuing.")
 			}
 			instanceUpgrade(currentInstance, use)
 		}
