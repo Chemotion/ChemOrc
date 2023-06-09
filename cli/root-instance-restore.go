@@ -26,19 +26,19 @@ var restoreInstanceRootCmd = &cobra.Command{
 			var success bool
 			if success = instanceCreateProduction(details); success {
 				zboth.Info().Msgf("Successfully created a new production instance. Now restoring the backup into it")
-				if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(toSprintf("cp %s %s-%s-%d:/backup/backup.data.tar.gz", data, details["name"], primaryService, rollNum)), gotoFolder("workdir"); success {
-					if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(toSprintf("cp %s %s-%s-%d:/backup/backup.sql.gz", db, details["name"], primaryService, rollNum)), gotoFolder("workdir"); success {
+				if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(toSprintf("cp %s %s-%s-%d:/backup/backup.data.tar.gz", data, details["name"], primaryService, rollNum)), gotoFolder("work.dir"); success {
+					if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(toSprintf("cp %s %s-%s-%d:/backup/backup.sql.gz", db, details["name"], primaryService, rollNum)), gotoFolder("work.dir"); success {
 						zboth.Info().Msgf("Backup files copied successfully. Now attempting restore them!")
-						if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(composeCall+"--profile execution run --rm -e FORCE_DB_RESET=1 executor chemotion restore"), gotoFolder("workdir"); success {
+						if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(composeCall+"--profile execution run --rm -e FORCE_DB_RESET=1 executor chemotion restore"), gotoFolder("work.dir"); success {
 							zboth.Info().Msgf("Restoration completed successfully. Once switched on, `%s` can be found at: %s", details["givenName"], details["accessAddress"])
 						}
-						if _, successDataMv, _ := gotoFolder(details["givenName"]), callVirtualizer(composeCall+"--profile execution run --rm executor mv /backup/backup.data.tar.gz /backup/backup-first.data.tar.gz"), gotoFolder("workdir"); successDataMv {
-							_, _, _ = gotoFolder(details["givenName"]), callVirtualizer(composeCall+"--profile execution run --rm executor ln -s /backup/backup-first.data.tar.gz /backup/backup.data.tar.gz"), gotoFolder("workdir")
+						if _, successDataMv, _ := gotoFolder(details["givenName"]), callVirtualizer(composeCall+"--profile execution run --rm executor mv /backup/backup.data.tar.gz /backup/backup-first.data.tar.gz"), gotoFolder("work.dir"); successDataMv {
+							_, _, _ = gotoFolder(details["givenName"]), callVirtualizer(composeCall+"--profile execution run --rm executor ln -s /backup/backup-first.data.tar.gz /backup/backup.data.tar.gz"), gotoFolder("work.dir")
 						} else {
 							zboth.Warn().Msgf("Failed to rename the data backup file. Symlinks to new backups in this new instance will not be created till this file is renamed.")
 						}
-						if _, successDBMv, _ := gotoFolder(details["givenName"]), callVirtualizer(composeCall+"--profile execution run --rm executor mv /backup/backup.sql.gz /backup/backup-first.sql.gz"), gotoFolder("workdir"); successDBMv {
-							_, _, _ = gotoFolder(details["givenName"]), callVirtualizer(composeCall+"--profile execution run --rm executor ln -s /backup/backup-first.sql.gz /backup/backup.sql.gz"), gotoFolder("workdir")
+						if _, successDBMv, _ := gotoFolder(details["givenName"]), callVirtualizer(composeCall+"--profile execution run --rm executor mv /backup/backup.sql.gz /backup/backup-first.sql.gz"), gotoFolder("work.dir"); successDBMv {
+							_, _, _ = gotoFolder(details["givenName"]), callVirtualizer(composeCall+"--profile execution run --rm executor ln -s /backup/backup-first.sql.gz /backup/backup.sql.gz"), gotoFolder("work.dir")
 						} else {
 							zboth.Warn().Msgf("Failed to rename the database backup file. Symlinks to new backups in this new instance will not be created till this file is renamed.")
 						}
@@ -52,7 +52,7 @@ var restoreInstanceRootCmd = &cobra.Command{
 				zboth.Fatal().Msgf("Failed to create an instance to restore the files into!")
 			}
 			if success {
-				_, _, _ = gotoFolder(details["givenName"]), callVirtualizer(composeCall+"stop"), gotoFolder("workdir")
+				_, _, _ = gotoFolder(details["givenName"]), callVirtualizer(composeCall+"stop"), gotoFolder("work.dir")
 			} else {
 				zboth.Warn().Msgf("Restoration process failed. Check LOG!")
 				if selectYesNo(toSprintf("Do you want to remove this instance called %s because the restoration process failed?", details["givenName"]), true) {

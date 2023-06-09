@@ -144,7 +144,7 @@ func instanceCreateProduction(details map[string]string) (success bool) {
 		if err := copyfile(details["use"], dest.String()); err == nil {
 			composeFile = *dest
 		} else {
-			zboth.Fatal().Err(err).Msgf("Failed to copy the suggested compose file: %s. This is necessary for future use.")
+			zboth.Fatal().Err(err).Msgf("Failed to copy the suggested compose file: %s. This is necessary for future use.", details["use"])
 		}
 	} else {
 		composeFile = downloadFile(details["use"], workDir.Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename)).String())
@@ -169,12 +169,12 @@ func instanceCreateProduction(details map[string]string) (success bool) {
 		zboth.Fatal().Err(err).Msgf("Unable to create folder to store instances of %s.", nameProject)
 	}
 	// write out the extended compose file
-	if _, err, _ := gotoFolder(details["givenName"]), extendedCompose.WriteConfigAs(cliComposeFilename), gotoFolder("workdir"); err == nil {
+	if _, err, _ := gotoFolder(details["givenName"]), extendedCompose.WriteConfigAs(cliComposeFilename), gotoFolder("work.dir"); err == nil {
 		zboth.Info().Msgf("Written compose files %s and %s in the above steps.", chemotionComposeFilename, cliComposeFilename)
 	} else {
 		zboth.Fatal().Err(err).Msgf("Failed to write the extended compose file to its repective folder. This is necessary for future use.")
 	}
-	if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(composeCall+"up --no-start"), gotoFolder("workdir"); !success {
+	if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(composeCall+"up --no-start"), gotoFolder("work.dir"); !success {
 		zboth.Fatal().Err(toError("compose up failed")).Msgf("Failed to setup an instance of %s. Check log. ABORT!", nameProject)
 	}
 	var firstRun bool

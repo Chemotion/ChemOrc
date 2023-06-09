@@ -85,10 +85,8 @@ func downloadFile(fileURL string, downloadLocation string) (filepath pathlib.Pat
 
 // to copy a file
 func copyfile(source, destination string) (err error) {
-	file := *pathlib.NewPath(source)
 	var read []byte
-	read, err = file.ReadFile()
-	if err == nil {
+	if read, err = pathlib.NewPath(source).ReadFile(); err == nil {
 		err = pathlib.NewPath(destination).WriteFile(read)
 	}
 	return
@@ -96,7 +94,7 @@ func copyfile(source, destination string) (err error) {
 
 // to read in a YAML file
 func readYAML(filepath string) (yamlFile viper.Viper, err error) {
-	// parse the compose file
+	// parse the YAML file
 	yamlFile = *viper.New()
 	yamlFile.SetConfigFile(filepath)
 	err = yamlFile.ReadInConfig()
@@ -106,7 +104,7 @@ func readYAML(filepath string) (yamlFile viper.Viper, err error) {
 // change directory with logging
 func gotoFolder(givenName string) (pwd string) {
 	var folder string
-	if givenName == "workdir" {
+	if givenName == "work.dir" {
 		folder = "../.."
 	} else {
 		folder = workDir.Join(instancesWord, getInternalName(givenName)).String()
@@ -115,27 +113,27 @@ func gotoFolder(givenName string) (pwd string) {
 		pwd, _ = os.Getwd()
 		zboth.Debug().Msgf("Changed working directory to: %s", pwd)
 	} else {
-		zboth.Fatal().Msgf("Failed to changed working directory as required.")
+		zboth.Fatal().Err(err).Msgf("Failed to changed working directory as required.")
 	}
 	return
 }
 
 // determine shell to use
 func determineShell() (shell string) {
-	if runtime.GOOS == "windows" {
-		shell = "pwsh"
-	} else {
-		shell = os.Getenv("SHELL")
-	}
-	if shell == "" {
-		for _, shell = range []string{"bash", "sh", "zsh", "fish"} {
-			if _, err := exec.LookPath(shell); err == nil {
-				break
+	var err error
+	if shell = os.Getenv("SHELL"); shell == "" {
+		if runtime.GOOS == "windows" {
+			if shell, err = exec.LookPath("pwsh.exe"); err == nil {
+				return
+			} else {
+				if shell, err = exec.LookPath("powershell.exe"); err == nil {
+					return
+				}
 			}
+		} else {
+			err = toError("$SHELL variable not set")
 		}
-	}
-	if shell == "" {
-		zboth.Fatal().Err(toError("no shell found")).Msgf("Cannot run this tool. No compatible shell found in path.")
+		zboth.Fatal().Err(err).Msgf("Cannot run this tool. No compatible shell found.")
 	}
 	return
 }
@@ -144,10 +142,10 @@ func determineShell() (shell string) {
 func execShell(command string) (result []byte, err error) {
 	if result, err = exec.Command(shell, "-c", command).CombinedOutput(); err == nil {
 		zboth.Debug().Msgf("Sucessfully executed shell command: %s in shell: %s", command, shell)
-		zlog.Debug().Msgf("Output of execution: %s", result) // output not on screen
 	} else {
 		zboth.Warn().Err(err).Msgf("Failed execution of command: %s in shell: %s", command, shell)
 	}
+	zlog.Debug().Msgf("Output of execution: %s", result) // output not shown on screen
 	return
 }
 
@@ -155,7 +153,7 @@ func execShell(command string) (result []byte, err error) {
 func changeExposedPort(filename string, newPort string) (err error) {
 	if existingFile(filename) {
 		var result []byte
-		if callVirtualizer("pull mikefarah/yq") {
+		if callVirtualizer("pull mikefarah/yq") { // get the latest version
 			if result, err = execShell(toSprintf("cat %s | %s run -i --rm mikefarah/yq '.%s |= sub(\"%d:\", \"%s:\")'", filename, virtualizer, joinKey("services", "eln", "ports[0]"), firstPort, newPort)); err == nil {
 				yamlFile := pathlib.NewPath(filename)
 				err = yamlFile.WriteFile(result)

@@ -10,7 +10,7 @@ import (
 func instanceList() {
 	allInstances := allInstances()
 	if conf.GetBool(joinKey(stateWord, "debug")) {
-		zboth.Debug().Msgf("Currently existing instances are :", strings.Join(allInstances, " "))
+		zboth.Debug().Msgf("Currently existing instances are : %s", strings.Join(allInstances, " "))
 	}
 	if isInteractive(false) {
 		fmt.Printf("The following instances of %s exist:\n", nameProject)

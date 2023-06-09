@@ -19,7 +19,7 @@ func dropIntoConsole(givenName string, consoleName string) { // see if can be mo
 	}
 	if !(elementInSlice(status, &[]string{"Created", "Exited"}) > 0) {
 		zboth.Info().Msgf("Entering %s for instance `%s`.", properName, givenName)
-		if _, success, _ := gotoFolder(givenName), callVirtualizer(toSprintf("compose exec %s chemotion %s", primaryService, consoleName)), gotoFolder("workdir"); success {
+		if _, success, _ := gotoFolder(givenName), callVirtualizer(toSprintf("compose exec %s chemotion %s", primaryService, consoleName)), gotoFolder("work.dir"); success {
 			zboth.Debug().Msgf("Successfuly closed %s for `%s`.", properName, givenName)
 		} else {
 			zboth.Warn().Msgf("%s ended with an error.", properName)

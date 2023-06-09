@@ -8,14 +8,14 @@ func instanceRemove(givenName string, force bool) (err error) {
 	name := getInternalName(givenName)
 	// stop and delete instance
 	if force {
-		if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+"kill"), gotoFolder("workdir"); success {
+		if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+"kill"), gotoFolder("work.dir"); success {
 			zboth.Debug().Msgf("Successfully killed container of instance called %s.", givenName)
 		} else {
 			err = toError("failed to kill the containers associated with instance %s", givenName)
 			return
 		}
 	}
-	if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+"down --remove-orphans --volumes"), gotoFolder("workdir"); success {
+	if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+"down --remove-orphans --volumes"), gotoFolder("work.dir"); success {
 		zboth.Debug().Msgf("Successfully removed container of instance called %s.", givenName)
 	} else {
 		err = toError("failed to remove the containers associated with instance %s", givenName)
