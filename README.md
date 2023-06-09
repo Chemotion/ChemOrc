@@ -59,7 +59,7 @@ These binary builds should not rely on libraries of the underlying operating sys
 | macOS (intel/amd64)^     | `chmod u+x chemCLI.amd.osx`  | `./chemCLI.amd.osx`       |
 | macOS (apple-silicon)^   | `chmod u+x chemCLI.arm.osx`  | `./chemCLI.arm.osx`       |
 
-\*On Windows, it is recommended to use [Powershell 7](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell) instead of the one provided natively ([confusingly called Windows Powershell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell)). In any case, it is necessary to have `pwsh` in your `$PATH`.
+\*On Windows, it is recommended to use [Powershell 7](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell) instead of the one provided natively ([confusingly called Windows Powershell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell)). In any case, it is necessary to have `pwsh` or `powershell` in your `$PATH`.
 
 ^On macOS, if the there is a security pop-up when running the command, please also `Allow` the executable in `System Preferences > Security & Privacy`.
 
