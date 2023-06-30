@@ -40,6 +40,7 @@ func writeConfig(firstRun bool) (err error) {
 		conf.Set(joinKey(stateWord, "quiet"), false)
 		conf.Set(joinKey(stateWord, "debug"), false)
 		conf.Set(joinKey(stateWord, "version"), versionCLI)
+		conf.Set(joinKey(stateWord, "first_port"), 4000)
 	} else { // backup values
 		oldConf, err := readYAML(conf.ConfigFileUsed())
 		if err != nil {
@@ -154,7 +155,7 @@ func changeExposedPort(filename string, newPort string) (err error) {
 	if existingFile(filename) {
 		var result []byte
 		if callVirtualizer("pull mikefarah/yq") { // get the latest version
-			if result, err = execShell(toSprintf("cat %s | %s run -i --rm mikefarah/yq '.%s |= sub(\"%d:\", \"%s:\")'", filename, virtualizer, joinKey("services", "eln", "ports[0]"), firstPort, newPort)); err == nil {
+			if result, err = execShell(toSprintf("cat %s | %s run -i --rm mikefarah/yq '.%s |= sub(\"%d:\", \"%s:\")'", filename, virtualizer, joinKey("services", "eln", "ports[0]"), 4000, newPort)); err == nil {
 				yamlFile := pathlib.NewPath(filename)
 				err = yamlFile.WriteFile(result)
 			}

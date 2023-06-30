@@ -43,6 +43,12 @@ func parseCompose(use string) (compose viper.Viper) {
 // helper to get a fresh (unassigned port)
 func getFreshPort(kind string) (port uint64) {
 	existingPorts := allPorts()
+	var firstPort uint64
+	if assigned := conf.GetInt(joinKey(stateWord, "first_port")); assigned == 0 {
+		firstPort = 4000
+	} else {
+		firstPort = uint64(assigned)
+	}
 	if len(existingPorts) == 0 {
 		port = firstPort
 	} else {
@@ -149,11 +155,9 @@ func instanceCreateProduction(details map[string]string) (success bool) {
 	} else {
 		composeFile = downloadFile(details["use"], workDir.Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename)).String())
 	}
-	if port != firstPort {
-		if err := changeExposedPort(composeFile.String(), details["port"]); err != nil {
-			composeFile.Remove()
-			zboth.Fatal().Err(err).Msgf("Failed to update the downloaded compose file. This is necessary for future use.")
-		}
+	if err := changeExposedPort(composeFile.String(), details["port"]); err != nil {
+		composeFile.Remove()
+		zboth.Fatal().Err(err).Msgf("Failed to update the downloaded compose file. This is necessary for future use.")
 	}
 	extendedCompose := createExtendedCompose(details, composeFile.String())
 	// store values in the conf, the conf file is modified only later
