@@ -92,10 +92,10 @@ func createExtendedCompose(details map[string]string, use string) (extendedCompo
 	extendedCompose.Set(joinKey("services", "executor", "depends_on"), []string{"db"})
 	extendedCompose.Set(joinKey("services", "executor", "networks"), []string{"chemotion"})
 	extendedCompose.Set(joinKey("services", "executor", "profiles"), []string{"execution"})
-	// set labels on services, volumes and networks for future identification
-	sections := []string{"services", "volumes", "networks"}
+	// set labels on services and volumes for future identification
+	sections := []string{"services", "volumes"}
 	for _, section := range sections {
-		subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services, volumes and networks
+		subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services and volumes
 		for _, k := range subheadings {
 			extendedCompose.Set(joinKey(section, k, "labels"), map[string]string{"net.chemotion.cli.project": name})
 		}
