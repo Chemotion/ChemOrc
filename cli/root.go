@@ -43,32 +43,31 @@ import (
 )
 
 const (
-	nameProject                     = "Chemotion ELN"
-	nameCLI                         = "chemCLI"
-	versionConfig                   = "2.1"
-	logFilename                     = "chem_cli.log"
-	defaultConfigFilepath           = "chem_cli.yml"
-	chemotionComposeFilename        = "docker-compose.yml"
-	cliComposeFilename              = "docker-compose.cli.yml"
-	stateWord                       = "cli_state"
-	selectorWord                    = "selected"  // key that is expected in the configFile to figure out the selected instance
-	instancesWord                   = "instances" // the folder/key in which chemotion expects to find all the instances
-	virtualizer                     = "docker"
-	addressDefault                  = "http://localhost"
-	minimumVirtualizer              = "20.10.10" // so as to support docker compose files version 3.9 and forcing Docker Desktop >= 4
-	maxInstancesOfKind              = 63
-	firstPort                uint64 = 4000
-	repositoryGH                    = "https://github.com/Chemotion/ChemCLI"
-	composeURL                      = repositoryGH + "/releases/latest/download/docker-compose.yml"
-	backupshURL                     = repositoryGH + "/releases/latest/download/backup.sh"
-	rollNum                         = 1 // the default index number assigned by virtualizer to every container
-	primaryService                  = "eln"
+	nameProject              = "Chemotion ELN"
+	nameCLI                  = "chemCLI"
+	versionConfig            = "2.1"
+	logFilename              = "chem_cli.log"
+	defaultConfigFilepath    = "chem_cli.yml"
+	chemotionComposeFilename = "docker-compose.yml"
+	cliComposeFilename       = "docker-compose.cli.yml"
+	stateWord                = "cli_state"
+	selectorWord             = "selected"  // key that is expected in the configFile to figure out the selected instance
+	instancesWord            = "instances" // the folder/key in which chemotion expects to find all the instances
+	virtualizer              = "docker"
+	addressDefault           = "http://localhost"
+	minimumVirtualizer       = "20.10.10" // so as to support docker compose files version 3.9 and forcing Docker Desktop >= 4
+	maxInstancesOfKind       = 63
+	repositoryGH             = "https://github.com/Chemotion/ChemCLI"
+	composeURL               = repositoryGH + "/releases/latest/download/docker-compose.yml"
+	backupshURL              = repositoryGH + "/releases/latest/download/backup.sh"
+	rollNum                  = 1 // the default index number assigned by virtualizer to every container
+	primaryService           = "eln"
 )
 
 // configuration and logging
 var (
 	// version number, here to allow override
-	versionCLI = "0.2.8"
+	versionCLI = "0.2.9"
 	// current shell
 	shell string
 	// currently selected instance

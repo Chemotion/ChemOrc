@@ -43,6 +43,13 @@ func parseCompose(use string) (compose viper.Viper) {
 // helper to get a fresh (unassigned port)
 func getFreshPort(kind string) (port uint64) {
 	existingPorts := allPorts()
+	var firstPort uint64
+	if assigned := conf.GetInt(joinKey(stateWord, "first_port")); assigned == 0 {
+		firstPort = 4000
+		conf.Set(joinKey(stateWord, "first_port"), firstPort)
+	} else {
+		firstPort = uint64(assigned)
+	}
 	if len(existingPorts) == 0 {
 		port = firstPort
 	} else {
@@ -86,10 +93,10 @@ func createExtendedCompose(details map[string]string, use string) (extendedCompo
 	extendedCompose.Set(joinKey("services", "executor", "depends_on"), []string{"db"})
 	extendedCompose.Set(joinKey("services", "executor", "networks"), []string{"chemotion"})
 	extendedCompose.Set(joinKey("services", "executor", "profiles"), []string{"execution"})
-	// set labels on services, volumes and networks for future identification
-	sections := []string{"services", "volumes", "networks"}
+	// set labels on services and volumes for future identification
+	sections := []string{"services", "volumes"}
 	for _, section := range sections {
-		subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services, volumes and networks
+		subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services and volumes
 		for _, k := range subheadings {
 			extendedCompose.Set(joinKey(section, k, "labels"), map[string]string{"net.chemotion.cli.project": name})
 		}
@@ -149,11 +156,9 @@ func instanceCreateProduction(details map[string]string) (success bool) {
 	} else {
 		composeFile = downloadFile(details["use"], workDir.Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename)).String())
 	}
-	if port != firstPort {
-		if err := changeExposedPort(composeFile.String(), details["port"]); err != nil {
-			composeFile.Remove()
-			zboth.Fatal().Err(err).Msgf("Failed to update the downloaded compose file. This is necessary for future use.")
-		}
+	if err := changeExposedPort(composeFile.String(), details["port"]); err != nil {
+		composeFile.Remove()
+		zboth.Fatal().Err(err).Msgf("Failed to update the downloaded compose file. This is necessary for future use.")
 	}
 	extendedCompose := createExtendedCompose(details, composeFile.String())
 	// store values in the conf, the conf file is modified only later
@@ -241,15 +246,22 @@ func processInstanceCreateCmd(cmd *cobra.Command, details map[string]string) (cr
 				details["givenName"] = getString("Please enter the name of the instance you want to create", newInstanceValidate)
 			}
 			if askUse {
-				switch selectOpt([]string{"latest - 1.6.0", "1.5.4", "1.5.3"}, "Select the version of ELN you want to install") {
-				case "1.6.0":
-					details["use"] = composeURL
+				versions := []string{"1.7.0", "1.6.2", "1.5.4"}
+				if conf.IsSet(joinKey(stateWord, "latest_eln")) {
+					latest := conf.GetString(joinKey(stateWord, "latest_eln"))
+					if latest != "1.7.0" {
+						versions = append([]string{latest + " - latest stable version"}, versions...)
+					}
+				}
+				switch selectOpt(versions, "Select the version of ELN you want to install") {
+				case "1.7.0":
+					details["use"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/6a07d35947595f2fedd7bbe82b657b9d910db6da/payload/docker-compose.yml"
+				case "1.6.2":
+					details["use"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/e577832edaba14fa21ee9aa9288e4b00052729c8/payload/docker-compose.yml"
 				case "1.5.4":
 					details["use"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/548ead617a552307f30d5051e72c01d95e99b30f/payload/docker-compose.yml"
-				case "1.5.3":
-					details["use"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/5bacb0c83342ec1bb675057cbbca8e9f761236e9/payload/docker-compose.yml"
 				default:
-					details["use"] = composeURL
+					details["use"] = composeURL // catches latest
 				}
 			}
 			if askAddress {

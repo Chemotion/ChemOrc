@@ -65,11 +65,9 @@ func instanceUpgrade(givenName, use string) {
 	// get port from old compose
 	oldComposeFile := workDir.Join(instancesWord, name, chemotionComposeFilename)
 	oldCompose := parseCompose(oldComposeFile.String())
-	if oldCompose.GetStringSlice(joinKey("services", primaryService, "ports"))[0] != toSprintf("%d:%d", firstPort, firstPort) {
-		if err := changeExposedPort(newComposeFile.String(), oldCompose.GetStringSlice(joinKey("services", primaryService, "ports"))[0][:4]); err != nil {
-			newComposeFile.Remove()
-			zboth.Fatal().Err(err).Msgf("Failed to update the port in downloaded compose file. This is necessary for future use. The file was removed.")
-		}
+	if err := changeExposedPort(newComposeFile.String(), oldCompose.GetStringSlice(joinKey("services", primaryService, "ports"))[0][:4]); err != nil {
+		newComposeFile.Remove()
+		zboth.Fatal().Err(err).Msgf("Failed to update the port in downloaded compose file. This is necessary for future use. The file was removed.")
 	}
 	// backup the old compose file
 	if err := oldComposeFile.Rename(workDir.Join(instancesWord, name, toSprintf("old.%s.%s", time.Now().Format("060102150405"), chemotionComposeFilename))); err == nil {
@@ -112,6 +110,28 @@ func instanceUpgrade(givenName, use string) {
 			conf.Set(joinKey(instancesWord, givenName, "image"), newImage)
 			writeConfig(false)
 			zboth.Info().Msgf("Instance upgraded successfully!")
+			func() { // remove extra entry from extended compose
+				if _, success, _ = gotoFolder(givenName), callVirtualizer("pull mikefarah/yq"), gotoFolder("work.dir"); success {
+					var result []byte
+					gotoFolder(givenName)
+					extendedCompose := parseCompose(cliComposeFilename)
+					if extendedCompose.IsSet("networks.chemotion.labels") {
+						labels := extendedCompose.GetStringMapString("networks.chemotion.labels")
+						if strings.HasPrefix(labels["net.chemotion.cli.project"], givenName) {
+							if result, err = execShell(toSprintf("cat %s | %s run -i --rm mikefarah/yq 'del(.networks.*.labels)'", cliComposeFilename, virtualizer)); err == nil {
+								yamlFile := pathlib.NewPath(cliComposeFilename)
+								err = yamlFile.WriteFile(result)
+							}
+						}
+					}
+					gotoFolder("work.dir")
+					if err != nil {
+						zboth.Warn().Err(err).Msgf("Failed to correct the file %s for instance %s.", cliComposeFilename, givenName)
+					}
+				} else {
+					zboth.Warn().Err(toError("failed to pull `yq`")).Msgf("Failed to pull `yq` image.")
+				}
+			}()
 		} else {
 			err = toError("%s failed", commandStr)
 			msg = toSprintf("Failed to initialize upgraded %s. Check log. ABORT!", givenName)
