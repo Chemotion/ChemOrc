@@ -7,9 +7,51 @@ import (
 	"strings"
 
 	"github.com/chigopher/pathlib"
+	vercompare "github.com/hashicorp/go-version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+// helper to determine the required compose file
+func getComposeAddressToUse(currentVersion, action string) (use string) {
+	versions := make(map[string]string)
+	latestForThisCLIRelease := "1.7.0"
+	orderVersions := []string{latestForThisCLIRelease, "1.6.2", "1.5.4"} // descending order
+	versions[latestForThisCLIRelease] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/6a07d35947595f2fedd7bbe82b657b9d910db6da/payload/docker-compose.yml"
+	versions["1.6.2"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/e577832edaba14fa21ee9aa9288e4b00052729c8/payload/docker-compose.yml"
+	versions["1.5.4"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/548ead617a552307f30d5051e72c01d95e99b30f/payload/docker-compose.yml"
+	validVersions := []string{}
+	for _, version := range orderVersions {
+		now, _ := vercompare.NewVersion(currentVersion)
+		planned, _ := vercompare.NewVersion(version)
+		if planned.GreaterThan(now) {
+			validVersions = append(validVersions, planned.String())
+		} else if planned.Equal(now) {
+			validVersions = append(validVersions, now.String()+" - current version")
+		}
+	}
+	if conf.IsSet(joinKey(stateWord, "latest_eln")) {
+		latest := conf.GetString(joinKey(stateWord, "latest_eln"))
+		if latest == latestForThisCLIRelease {
+			for i := range validVersions {
+				if validVersions[i] == latest {
+					validVersions[i] = latest + " - latest stable version"
+				}
+			}
+		} else {
+			validVersions = append([]string{latest + " - latest stable version"}, validVersions...)
+			versions[latest] = composeURL
+		}
+	}
+	if len(validVersions) != 0 {
+		selected := selectOpt(validVersions, toSprintf("Select the version of ELN you want to %s", action))
+		selected, _, _ = strings.Cut(selected, " -")
+		use = versions[selected]
+	} else {
+		use = composeURL
+	}
+	return
+}
 
 // helper to get a compose file
 func parseCompose(use string) (compose viper.Viper) {
@@ -98,7 +140,7 @@ func createExtendedCompose(details map[string]string, use string) (extendedCompo
 	for _, section := range sections {
 		subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services and volumes
 		for _, k := range subheadings {
-			extendedCompose.Set(joinKey(section, k, "labels"), map[string]string{"net.chemotion.cli.project": name})
+			extendedCompose.Set(joinKey(section, k, "labels"), []string{toSprintf("net.chemotion.cli.project=%s", name)})
 		}
 	}
 	// set unique name for volumes in the compose file
@@ -246,23 +288,7 @@ func processInstanceCreateCmd(cmd *cobra.Command, details map[string]string) (cr
 				details["givenName"] = getString("Please enter the name of the instance you want to create", newInstanceValidate)
 			}
 			if askUse {
-				versions := []string{"1.7.0", "1.6.2", "1.5.4"}
-				if conf.IsSet(joinKey(stateWord, "latest_eln")) {
-					latest := conf.GetString(joinKey(stateWord, "latest_eln"))
-					if latest != "1.7.0" {
-						versions = append([]string{latest + " - latest stable version"}, versions...)
-					}
-				}
-				switch selectOpt(versions, "Select the version of ELN you want to install") {
-				case "1.7.0":
-					details["use"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/6a07d35947595f2fedd7bbe82b657b9d910db6da/payload/docker-compose.yml"
-				case "1.6.2":
-					details["use"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/e577832edaba14fa21ee9aa9288e4b00052729c8/payload/docker-compose.yml"
-				case "1.5.4":
-					details["use"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/548ead617a552307f30d5051e72c01d95e99b30f/payload/docker-compose.yml"
-				default:
-					details["use"] = composeURL // catches latest
-				}
+				details["use"] = getComposeAddressToUse("1.3.1", "install")
 			}
 			if askAddress {
 				if selectYesNo("Is this instance having its own web-address (e.g. https://chemotion.uni.de or http://chemotion.uni.de:4100)?", false) {

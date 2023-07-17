@@ -110,7 +110,11 @@ func instanceUpgrade(givenName, use string) {
 			conf.Set(joinKey(instancesWord, givenName, "image"), newImage)
 			writeConfig(false)
 			zboth.Info().Msgf("Instance upgraded successfully!")
-			func() { // remove extra entry from extended compose
+			func() {
+				// fixes bugs in extended compose
+				// update image in extended compose
+				// remove extra entry from extended compose
+				// rewrite labels
 				if _, success, _ = gotoFolder(givenName), callVirtualizer("pull mikefarah/yq"), gotoFolder("work.dir"); success {
 					var result []byte
 					gotoFolder(givenName)
@@ -121,9 +125,25 @@ func instanceUpgrade(givenName, use string) {
 							if result, err = execShell(toSprintf("cat %s | %s run -i --rm mikefarah/yq 'del(.networks.*.labels)'", cliComposeFilename, virtualizer)); err == nil {
 								yamlFile := pathlib.NewPath(cliComposeFilename)
 								err = yamlFile.WriteFile(result)
+								if err == nil {
+									extendedCompose = parseCompose(cliComposeFilename)
+								}
 							}
 						}
 					}
+					extendedCompose.Set(joinKey("services", "executor", "image"), newImage)
+					if extendedCompose.IsSet(joinKey("networks", "chemotion")) {
+						// reset labels on services and volumes for future identification
+						sections := []string{"services", "volumes"}
+						compose := parseCompose(chemotionComposeFilename)
+						for _, section := range sections {
+							subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services and volumes
+							for _, k := range subheadings {
+								extendedCompose.Set(joinKey(section, k, "labels"), []string{toSprintf("net.chemotion.cli.project=%s", name)})
+							}
+						}
+					}
+					err = extendedCompose.WriteConfigAs(cliComposeFilename)
 					gotoFolder("work.dir")
 					if err != nil {
 						zboth.Warn().Err(err).Msgf("Failed to correct the file %s for instance %s.", cliComposeFilename, givenName)
@@ -131,7 +151,7 @@ func instanceUpgrade(givenName, use string) {
 				} else {
 					zboth.Warn().Err(toError("failed to pull `yq`")).Msgf("Failed to pull `yq` image.")
 				}
-			}()
+			}() // to be removed in version 3
 		} else {
 			err = toError("%s failed", commandStr)
 			msg = toSprintf("Failed to initialize upgraded %s. Check log. ABORT!", givenName)
@@ -160,6 +180,8 @@ var upgradeInstanceRootCmd = &cobra.Command{
 			upgrade = !pull
 		}
 		if !pull && isInteractive(false) {
+			_, currentVersion, _ := strings.Cut(conf.GetString(joinKey(instancesWord, currentInstance, "image")), "-")
+			use = getComposeAddressToUse(currentVersion, "upgrade to")
 			switch selectOpt([]string{"all actions: pull image, backup and upgrade", "preparation: pull image and backup", "upgrade only (if already prepared)", "pull image only", coloredExit}, "What do you want to do") {
 			case "all actions: pull image, backup and upgrade":
 				pull, backup, stop, upgrade = true, true, true, true
