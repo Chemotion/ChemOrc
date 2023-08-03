@@ -2,15 +2,31 @@
 
 ChemCLI, short for Chemotion CLI, is a tool to help you manage Chemotion ELN on a machine. The goal is to make installation, maintenance and upgradation of (multiple instances of) Chemotion as easy as possible.
 
+## Important Announcement
+
+Have a bug that looks as follows when trying to update?
+
+```sh
+pg_dump: error: connection to server at "db" (172.21.0.2), port 5432 failed: FATAL:  database "chemotion" does not exist
+```
+
+Then please have a look at the `docker-compose.cli.yml` files in the `instances` folder. The section `services.executor.image` should be changed so that it matches `services.eln.image` in the `docker-compose.yml` file. Otherwise, you will likely bug that looks as follows when trying to upgrade:
+
+## Note
+
+If you are using ChemCLI versions 0.2.0 to 0.2.3, you will have to run the following command to (force) run the auto-update feature: `./chemCLI advanced update --force`. You can also (always) [download a new executable of ChemCLI](#download) to manually update the tool. (Apologies for the bug!)
+
+> Please note that support for version 0.1.x will be completely deprecated on 31.12.2023. The codes that help you migrate from version 0.1 to 0.2 will be removed in releases after 31.12.2023.
+
 ## Compatibility with Chemotion ELN
 
 ChemCLI tool supports the following versions of Chemotion ELN:
 
-| ELN Version                                                            | `docker-compose.yml` file                                                                                                                   | Supported by chemCLI version                                                                                                          |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| [v1.6.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.6.0) | [eln-1.6.0](https://raw.githubusercontent.com/Chemotion/ChemCLI/2b59c2ee120fd6ac3c243fe4e71b31f82c1c9339/payload/docker-compose.yml)        | [0.2.x](https://github.com/Chemotion/ChemCLI/releases/latest)                                                                         |
-| [v1.5.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.5.4) | [eln-1.5.4](https://raw.githubusercontent.com/Chemotion/ChemCLI/548ead617a552307f30d5051e72c01d95e99b30f/payload/docker-compose.yml)        | [0.2.x](https://github.com/Chemotion/ChemCLI/releases/latest)                                                                         |
-| [v1.3.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.3.1) | [eln-1.3.1p220712](https://raw.githubusercontent.com/Chemotion/ChemCLI/0e18f51543ebc111a091db15db8a43487b7f3e19/payload/docker-compose.yml) | [0.2.x](https://github.com/Chemotion/ChemCLI/releases/latest), [0.1.x](https://github.com/Chemotion/ChemCLI/releases/tag/0.1.6-alpha) |
+| ELN Version                                                            | `docker-compose.yml` file                                                                                                            | Supported by chemCLI version                                  |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| [v1.7.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.7.2) | [eln-1.7.2](https://raw.githubusercontent.com/Chemotion/ChemCLI/b07becc0f421a76aaee6f9e32ed6bf49f942258b/payload/docker-compose.yml) | [0.2.x](https://github.com/Chemotion/ChemCLI/releases/latest) |
+| [v1.6.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.6.2) | [eln-1.6.2](https://raw.githubusercontent.com/Chemotion/ChemCLI/e577832edaba14fa21ee9aa9288e4b00052729c8/payload/docker-compose.yml) | [0.2.x](https://github.com/Chemotion/ChemCLI/releases/latest) |
+| [v1.5.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.5.4) | [eln-1.5.4](https://raw.githubusercontent.com/Chemotion/ChemCLI/548ead617a552307f30d5051e72c01d95e99b30f/payload/docker-compose.yml) | [0.2.x](https://github.com/Chemotion/ChemCLI/releases/latest) |
 
 > Chemotion ELN version [1.4.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.4.1-3) is **not supported** because it requires [manual changes](https://chemotion.net/docs/eln/install_configure/manual_install#only-when-installing-or-upgrading-to-version-141) to the installation after downloading the [`docker-compose.yml`](https://raw.githubusercontent.com/ptrxyz/chemotion/ba4b4620ab2aaa6be32df78189c29970335b1989/docker-compose.yml) file.
 
@@ -59,7 +75,7 @@ These binary builds should not rely on libraries of the underlying operating sys
 | macOS (intel/amd64)^     | `chmod u+x chemCLI.amd.osx`  | `./chemCLI.amd.osx`       |
 | macOS (apple-silicon)^   | `chmod u+x chemCLI.arm.osx`  | `./chemCLI.arm.osx`       |
 
-\*On Windows, it is recommended to use [Powershell 7](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell) instead of the one provided natively ([confusingly called Windows Powershell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell)). In any case, it is necessary to have `pwsh` or `powershell` in your `$PATH`.
+\*On Windows, it is recommended to use [Powershell 7](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell) instead of the one provided natively ([confusingly called Windows Powershell](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell)). In any case, it is necessary to have `pwsh` in your `$PATH`.
 
 ^On macOS, if the there is a security pop-up when running the command, please also `Allow` the executable in `System Preferences > Security & Privacy`.
 
@@ -76,7 +92,7 @@ Make a folder where you want to store installation(s) of Chemotion ELN. Ideally 
 
 ### Install
 
-To begin with installation, run the executable (`./chemCLI`) and follow the prompt. The first installation can take really long time (15-30 minutes depending on your download and processor speeds). Please be aware that instance names must be lowercase and cannot container periods (`.`).
+To begin with installation, run the executable (`./chemCLI`) and follow the prompt. The first installation can take really long time (15-30 minutes depending on your download and processor speeds). Please be aware that instance names must be lowercase and cannot contain periods (`.`).
 
 This will create the first (production-grade) `instance` of Chemotion on your system. Generally, this is suffice if you want to use Chemotion in a single scientific group/lab. By default
 
@@ -98,12 +114,29 @@ To turn on, and off, the `selected` instance, issue the commands:
 - `./chemCLI on`, and
 - `./chemCLI off`.
 
+### Backup an instance
+
+:::caution WARNING
+This backup process does not backup data that reside out docker e.g. `services` and `shared` folders. These folder need to be backed up by you separately.
+:::
+
+You can backup an instance of the ELN, installed using the CLI, by running the following command:
+`./chemCLI instance backup  -i <name_of_instance> -q`. This command must be run individually for every instance of Chemotion ELN that you have. Two new backup files are created _for each execution_ of the command inside the `instances/<name_of_instance-xxxxxxx>/shared/backup` folder. (These two files can be used to restore data into a new instance using the `./chemCLI instance restore` command.)
+
+If running this as a [cron](https://en.wikipedia.org/wiki/Cron) job, remember to change into the folder where the ChemCLI executable exists. To do this, include `cd path/to/the/folder` in your job script. Therefore an example crontab file that runs at [03:00 on every day-of-week from Tuesday through Saturday](https://crontab.guru/#0_3_*_*_2-6) would look like as follows:
+
+```cron
+0 3 * * 2-6 cd /home/admin/installations/chemotion_ELN && ./chemCLI instance backup -i prodinstance -q
+```
+
+Please also refer to the notes [here](manual_install#backing-up-and-restoring-your-data) for a better understanding of the backup process.
+
 ### Upgrading an instance (for ELN versions 1.3 and above)
 
 As long as you installed an instance of Chemotion using this tool, the upgrade process is quite straightforward:
 
 - First make sure that you have the [latest version of this tool](#updating-the-tool).
-- Prepare for update by running `./chemCLI` > `instance` > `upgrade` > `pull image only`. This will download the latest chemotion image from the internet if not already present on the system. Doing this saves you time later (during scheduled downtime).
+- Prepare for update by running `./chemCLI` > `instance` > `upgrade` > `pull image only`. This will download the latest Chemotion image from the internet if not already present on the system. Doing this saves you time later (during scheduled downtime).
 - Schedule a downtime of at least 15 minutes; more if you have a lot of data that needs to backed up. During the downtime, run `./chemCLI` > `instance` > `all actions` to backup your data followed by an upgrade of the instance.
 
 > When upgrading from ELN version 1.3, please create a backup using chemCLI version 0.2.2 or above. This is because the data backup script provided inside the container is broken and this is fixed by chemCLI tool.
@@ -163,5 +196,13 @@ Similarly, the CLI can be run in Debug mode when you encounter an error. This pr
 
 ## Known limitations and bugs
 
-- `./chemCLI off`: does not lead to exit of containers with exit code 0.
 - Everything happens in the folder (and subfolders) where `./chemCLI` is executed. All files and folders are expected to be there; otherwise failures can happen. The user executing ChemCLI is expected to have all file permissions for this folder.
+- Have a bug that looks as follows when trying to update?
+
+```sh
+pg_dump: error: connection to server at "db" (172.21.0.2), port 5432 failed: FATAL:  database "chemotion" does not exist
+```
+
+Then please have a look at the `docker-compose.cli.yml` files in the `instances` folder. The section `services.executor.image` should be changed so that it matches `services.eln.image` in the `docker-compose.yml` file. Otherwise, you will likely bug that looks as follows when trying to upgrade:
+
+- If you are using ChemCLI versions 0.2.0 to 0.2.3, you will have to run the following command to (force) run the auto-update feature: `./chemCLI advanced update --force`. You can also (always) [download a new executable of ChemCLI](#download) to manually update the tool.
