@@ -10,7 +10,7 @@ Have a bug that looks as follows when trying to update?
 pg_dump: error: connection to server at "db" (172.21.0.2), port 5432 failed: FATAL:  database "chemotion" does not exist
 ```
 
-Then please have a look at the `docker-compose.cli.yml` files in the `instances` folder. The section `services.executor.image` should be changed so that it matches `services.eln.image` in the `docker-compose.yml` file. Otherwise, you will likely bug that looks as follows when trying to upgrade:
+Then please have a look at the `docker-compose.cli.yml` files in the `instances` folder. The section `services.executor.image` should be changed so that it matches `services.eln.image` in the `docker-compose.yml` file.
 
 ## Note
 
@@ -203,6 +203,14 @@ Similarly, the CLI can be run in Debug mode when you encounter an error. This pr
 pg_dump: error: connection to server at "db" (172.21.0.2), port 5432 failed: FATAL:  database "chemotion" does not exist
 ```
 
-Then please have a look at the `docker-compose.cli.yml` files in the `instances` folder. The section `services.executor.image` should be changed so that it matches `services.eln.image` in the `docker-compose.yml` file. Otherwise, you will likely bug that looks as follows when trying to upgrade:
+Then please have a look at the `docker-compose.cli.yml` files in the `instances` folder. The section `services.executor.image` should be changed so that it matches `services.eln.image` in the `docker-compose.yml` file.
 
 - If you are using ChemCLI versions 0.2.0 to 0.2.3, you will have to run the following command to (force) run the auto-update feature: `./chemCLI advanced update --force`. You can also (always) [download a new executable of ChemCLI](#download) to manually update the tool.
+
+## Acknowledgments
+
+This project has been funded by the **[DFG](https://www.dfg.de/)**.
+
+![DFG Logo](https://www.dfg.de/zentralablage/bilder/service/logos_corporate_design/logo_negativ_267.png)
+
+Funded by the [Deutsche Forschungsgemeinschaft (DFG, German Research Foundation)](https://www.dfg.de/) under the [National Research Data Infrastructure – NFDI4Chem](https://nfdi4chem.de/) project – Projektnummer **441958208** – since 2020.
