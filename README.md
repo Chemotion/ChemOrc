@@ -211,6 +211,6 @@ Then please have a look at the `docker-compose.cli.yml` files in the `instances`
 
 This project has been funded by the **[DFG](https://www.dfg.de/)**.
 
-![[DFG Logo](https://www.dfg.de/)](https://www.dfg.de/zentralablage/bilder/service/logos_corporate_design/logo_negativ_267.png)
+![DFG Logo](https://www.dfg.de/zentralablage/bilder/service/logos_corporate_design/logo_negativ_267.png)
 
 Funded by the [Deutsche Forschungsgemeinschaft (DFG, German Research Foundation)](https://www.dfg.de/) under the [National Research Data Infrastructure – NFDI4Chem](https://nfdi4chem.de/) project – Projektnummer **441958208** – since 2020.
