@@ -1,11 +1,12 @@
 package cli
 
 import (
-	"net/http"
+	"context"
 	"strings"
 	"time"
 
 	"github.com/chigopher/pathlib"
+	api_gh "github.com/google/go-github/github"
 	vercompare "github.com/hashicorp/go-version"
 	"github.com/spf13/cobra"
 )
@@ -45,25 +46,13 @@ func selfUpdate(version string) {
 
 // get the version string of the latest release
 func getLatestVersion() (version string) {
-	client := http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-	}
-	var url string
-	if resp, errGet := client.Get(repositoryGH + "/releases/latest"); errGet == nil {
-		if loc, errLoc := resp.Location(); errLoc == nil {
-			url = loc.String()
-			urlInParts := strings.Split(url, "/")
-			version = urlInParts[len(urlInParts)-1]
-			zboth.Debug().Msgf("Latest version of CLI is %s, installed version is %s.", version, versionCLI)
-		} else {
-			zboth.Fatal().Err(errLoc).Msgf("Could not resolve the version of latest release.")
-		}
+	client := api_gh.NewClient(nil)
+	location := strings.Split(repositoryGH, "/")
+	if release, _, err := client.Repositories.GetLatestRelease(context.Background(), location[len(location)-2], location[len(location)-1]); err == nil {
+		return *release.TagName
 	} else {
-		zboth.Fatal().Err(errGet).Msgf("Could not resolve the version of latest release.")
+		return versionCLI
 	}
-	return
 }
 
 // check if an update is required; store time of check in the config file if it exists
@@ -89,9 +78,11 @@ func updateRequired(check bool) (required bool) {
 		newVer, _ := vercompare.NewVersion(getLatestVersion())
 		required = newVer.GreaterThan(existingVer)
 		conf.Set(timeKey, time.Now())
-		latestCompose := parseCompose(composeURL)
-		_, latestVersion, _ := strings.Cut(latestCompose.GetString(joinKey("services", primaryService, "image")), "-")
-		conf.Set(joinKey(stateWord, "latest_eln"), latestVersion)
+		if required {
+			latestCompose := parseCompose(composeURL)
+			_, latestVersion, _ := strings.Cut(latestCompose.GetString(joinKey("services", primaryService, "image")), "-")
+			conf.Set(joinKey(stateWord, "latest_eln"), latestVersion)
+		}
 		if existingFile(conf.ConfigFileUsed()) {
 			writeConfig(false)
 		}

@@ -97,6 +97,19 @@ func listUsers(givenName string) (names []string) {
 	return
 }
 
+func unlockUser(givenName, email string) {
+	if err := userExists(givenName, email); err == nil {
+		output := runRailsCommand(givenName, primaryService, "User.find_by(email: '"+email+"').update(locked_at: nil)")
+		if strings.Contains(output, "true") {
+			zboth.Info().Msgf("User associated with address %s unlocked successfully.", email)
+		} else {
+			zboth.Warn().Err(toError("unlocked failed")).Msgf("Failed to unlock the user with this address: %s.", email)
+		}
+	} else {
+		zboth.Warn().Err(err).Msgf("A User associated with email %s was not found.", email)
+	}
+}
+
 func deleteUser(givenName, email string) {
 	if err := userExists(givenName, email); err == nil {
 		output := runRailsCommand(givenName, primaryService, "User.find_by(email:'"+email+"').destroy")
@@ -114,7 +127,7 @@ var userInstanceRootCmd = &cobra.Command{
 	Use:       "user",
 	Aliases:   []string{"users"},
 	Short:     "Manage user such as create, add, update and remove user and reset password for " + nameCLI,
-	ValidArgs: []string{"create", "list", "update", "describe", "delete"},
+	ValidArgs: []string{"list", "unlock", "create", "update", "describe", "delete"},
 	Run: func(cmd *cobra.Command, args []string) {
 		var selected string
 		if ownCall(cmd) {
@@ -123,7 +136,7 @@ var userInstanceRootCmd = &cobra.Command{
 			}
 		} else {
 			if isInteractive(true) {
-				acceptedOpts := []string{"create", "list", "update", "describe", "delete"}
+				acceptedOpts := []string{"list", "unlock", "create", "update", "describe", "delete"}
 				if ownCall(cmd) {
 					acceptedOpts = append(acceptedOpts, coloredExit)
 				} else {
@@ -133,6 +146,16 @@ var userInstanceRootCmd = &cobra.Command{
 			}
 		}
 		switch selected {
+		case "list":
+			names := listUsers(currentInstance)
+			if len(names) > 0 {
+				zboth.Info().Msgf("The following users exist for instance %s:\n%s", currentInstance, strings.Join(names, "\n"))
+			} else {
+				zboth.Warn().Err(toError("no users found")).Msgf("No users were gathered from the instance %s.", currentInstance)
+			}
+		case "unlock":
+			email := getString("Please enter email address of the user you wish to unlock", emailValidate)
+			unlockUser(currentInstance, email)
 		case "create":
 			email := getString("Please enter email address of the user you wish to create", emailValidate)
 			if err := userExists(currentInstance, email); err == nil {
@@ -143,13 +166,6 @@ var userInstanceRootCmd = &cobra.Command{
 				}
 			} else {
 				createUser(currentInstance, email)
-			}
-		case "list":
-			names := listUsers(currentInstance)
-			if len(names) > 0 {
-				zboth.Info().Msgf("The following users exist for instance %s:\n%s", currentInstance, strings.Join(names, "\n"))
-			} else {
-				zboth.Warn().Err(toError("no users found")).Msgf("No users were gathered from the instance %s.", currentInstance)
 			}
 		case "describe":
 			email := getString("Please enter email address of the user you wish to describe", emailValidate)
