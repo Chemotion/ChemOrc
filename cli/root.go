@@ -67,7 +67,7 @@ const (
 // configuration and logging
 var (
 	// version number, here to allow override
-	versionCLI = "0.2.11"
+	versionCLI = "0.2.12"
 	// current shell
 	shell string
 	// currently selected instance
