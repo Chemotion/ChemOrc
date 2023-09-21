@@ -2,21 +2,23 @@
 
 ChemCLI, short for Chemotion CLI, is a tool to help you manage Chemotion ELN on a machine. The goal is to make installation, maintenance and upgradation of (multiple instances of) Chemotion as easy as possible.
 
-## Important Announcement
+## Important Announcements
 
-Have a bug that looks as follows when trying to update?
+1. You must manually update to version 0.2.12 of the CLI. This is because GitHub is blocking download of the `docker-compose.yml` file causing versions 0.2.11 and below to fail on start. To do so, go to [Releases](https://github.com/Chemotion/ChemCLI/releases) and download the required executable. See [Updating the Tool](#updating-the-tool) for more.
 
-```sh
-pg_dump: error: connection to server at "db" (172.21.0.2), port 5432 failed: FATAL:  database "chemotion" does not exist
-```
+   Manually updating the tool will trigger a warning about version mismatch whenever you run ChemCLI. To get around it, run `./chemCLI advanced update --force` after putting the new executable in place.
 
-Then please have a look at the `docker-compose.cli.yml` files in the `instances` folder. The section `services.executor.image` should be changed so that it matches `services.eln.image` in the `docker-compose.yml` file.
+1. Have a bug that looks as follows when trying to update an instance?
 
-## Note
+   ```sh
+   pg_dump: error: connection to server at "db" (172.21.0.2), port 5432 failed: FATAL:  database "chemotion" does not exist
+   ```
 
-If you are using ChemCLI versions 0.2.0 to 0.2.3, you will have to run the following command to (force) run the auto-update feature: `./chemCLI advanced update --force`. You can also (always) [download a new executable of ChemCLI](#download) to manually update the tool. (Apologies for the bug!)
+   Then please have a look at the `docker-compose.cli.yml` files in the `instances` folder. The section `services.executor.image` should be changed so that it matches `services.eln.image` in the `docker-compose.yml` file.
 
-> Please note that support for version 0.1.x will be completely deprecated on 31.12.2023. The codes that help you migrate from version 0.1 to 0.2 will be removed in releases after 31.12.2023.
+1. If you are using ChemCLI versions 0.2.0 to 0.2.3, you will have to run the following command to (force) run the auto-update feature: `./chemCLI advanced update --force`. You can also (always) [download a new executable of ChemCLI](#download) to manually update the tool. (Apologies for the bug!)
+
+1. Please note that support for version 0.1.x will be completely deprecated on 31.12.2023. The codes that help you migrate from version 0.1 to 0.2 will be removed in releases after 31.12.2023.
 
 ## Compatibility with Chemotion ELN
 
