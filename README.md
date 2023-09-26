@@ -26,7 +26,7 @@ ChemCLI tool supports the following versions of Chemotion ELN:
 
 | ELN Version                                                            | `docker-compose.yml` file                                                                                                            | Supported by chemCLI version                                  |
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
-| [v1.7.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.7.3) | [eln-1.7.3](https://raw.githubusercontent.com/Chemotion/ChemCLI/446e23aac22b4477887d474e1c79c744f415e1f5/payload/docker-compose.yml) | [0.2.x](https://github.com/Chemotion/ChemCLI/releases/latest) |
+| [v1.7.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.7.3) | [eln-1.7.3](https://raw.githubusercontent.com/Chemotion/ChemCLI/b8bb1280a6e042b96b8d3e71d030709b113686bc/payload/docker-compose.yml) | [0.2.x](https://github.com/Chemotion/ChemCLI/releases/latest) |
 | [v1.6.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.6.2) | [eln-1.6.2](https://raw.githubusercontent.com/Chemotion/ChemCLI/e577832edaba14fa21ee9aa9288e4b00052729c8/payload/docker-compose.yml) | [0.2.x](https://github.com/Chemotion/ChemCLI/releases/latest) |
 | [v1.5.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.5.4) | [eln-1.5.4](https://raw.githubusercontent.com/Chemotion/ChemCLI/548ead617a552307f30d5051e72c01d95e99b30f/payload/docker-compose.yml) | [0.2.x](https://github.com/Chemotion/ChemCLI/releases/latest) |
 

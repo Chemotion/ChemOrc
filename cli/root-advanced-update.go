@@ -24,23 +24,20 @@ func selfUpdate(version string) {
 	if errOld := oldVersion.RenameStr(toSprintf("%s.old", cliFileName)); errOld == nil {
 		if errNew := newVersion.RenameStr(cliFileName); errNew == nil {
 			zboth.Info().Msgf("Successfully downloaded the new version. Old version is available as %s and is safe to remove.", oldVersion.Name())
-			conf.Set(joinKey(stateWord, "version"), version)
-			if existingFile(conf.ConfigFileUsed()) {
-				latestCompose := parseCompose(composeURL)
-				_, latestVersion, _ := strings.Cut(latestCompose.GetString(joinKey("services", primaryService, "image")), "-")
-				conf.Set(joinKey(stateWord, "latest_eln"), latestVersion)
-				if err := writeConfig(false); err != nil {
-					zboth.Warn().Err(err).Msgf("Failed to rewrite config file. You will also need to update the %s.version to %s in the %s file manually.", stateWord, version, conf.ConfigFileUsed())
-				}
-			}
 		} else {
 			zboth.Warn().Err(errNew).Msgf("Successfully downloaded the new version. Please rename it to %s for further use. The old version is available as %s and is safe to remove.", cliFileName, oldVersion.Name())
-			if existingFile(conf.ConfigFileUsed()) {
-				zboth.Info().Msgf("You will also need to update the %s.version to %s in the %s file manually.", stateWord, version, conf.ConfigFileUsed())
-			}
 		}
 	} else {
 		zboth.Warn().Err(errOld).Msgf("Successfully downloaded the new version but failed to rename the old one. The new version is called %s, please rename it %s. The old version is safe to remove.", newVersion.Name(), cliFileName)
+	}
+	conf.Set(joinKey(stateWord, "version"), version)
+	if existingFile(conf.ConfigFileUsed()) {
+		latestCompose := parseCompose(composeURL)
+		_, latestVersion, _ := strings.Cut(latestCompose.GetString(joinKey("services", primaryService, "image")), "-")
+		conf.Set(joinKey(stateWord, "latest_eln"), latestVersion)
+		if err := writeConfig(false); err != nil {
+			zboth.Warn().Err(err).Msgf("Failed to rewrite config file. You will also need to update the %s.version to %s in the %s file manually.", stateWord, version, conf.ConfigFileUsed())
+		}
 	}
 }
 

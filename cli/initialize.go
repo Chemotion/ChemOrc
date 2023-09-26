@@ -92,7 +92,7 @@ func initConf() {
 				} else {
 					zboth.Fatal().Err(toError("version", conf.GetString("version"), "of", conf.ConfigFileUsed(), "incompatible with", nameCLI, versionCLI)).Msgf("Please upgrade %s to continue. Or use %s version 0.1.", nameCLI, nameCLI)
 				}
-			case "2.0", "2.1":
+			case "2.0", "2.1", "2.2":
 				if conf.IsSet(joinKey(stateWord, selectorWord)) {
 					if currentInstance == "" { // i.e. the flag was not set
 						if errUnmarshal := conf.UnmarshalKey(joinKey(stateWord, selectorWord), &currentInstance); errUnmarshal == nil {
