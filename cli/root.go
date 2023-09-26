@@ -45,7 +45,7 @@ import (
 const (
 	nameProject              = "Chemotion ELN"
 	nameCLI                  = "chemCLI"
-	versionConfig            = "2.1"
+	versionConfig            = "2.2"
 	logFilename              = "chem_cli.log"
 	defaultConfigFilepath    = "chem_cli.yml"
 	chemotionComposeFilename = "docker-compose.yml"
@@ -53,6 +53,7 @@ const (
 	stateWord                = "cli_state"
 	selectorWord             = "selected"  // key that is expected in the configFile to figure out the selected instance
 	instancesWord            = "instances" // the folder/key in which chemotion expects to find all the instances
+	patchWord                = "patches"   // key for patches that have been applied
 	virtualizer              = "docker"
 	addressDefault           = "http://localhost"
 	minimumVirtualizer       = "20.10.10" // so as to support docker compose files version 3.9 and forcing Docker Desktop >= 4
@@ -89,6 +90,8 @@ var (
 	composeCall = toSprintf("compose -f %s -f %s ", chemotionComposeFilename, cliComposeFilename) // extra space at end is on purpose
 	// to have exit where required
 	coloredExit = color.Color("[red]exit")
+	// patches to apply
+	patches = []string{"fix-173-ketcher"}
 )
 
 // data type that maps a string to corresponding cobra command
@@ -134,6 +137,11 @@ var rootCmd = &cobra.Command{
 			acceptedOpts = append(acceptedOpts, "install - "+nameProject)
 			rootCmdTable["install - "+nameProject] = newInstanceRootCmd.Run
 		} else {
+			for _, patch := range patches {
+				if success := applyPatch(patch); !success {
+					zboth.Warn().Msgf("Failed to apply patch: %s. Please contact support.", patch)
+				}
+			}
 			status := instanceStatus(currentInstance)
 			if status == "Up" {
 				acceptedOpts = []string{"off", "restart"}

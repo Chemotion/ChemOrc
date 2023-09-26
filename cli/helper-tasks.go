@@ -2,11 +2,64 @@ package cli
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	"github.com/chigopher/pathlib"
+	color "github.com/mitchellh/colorstring"
 	"github.com/spf13/viper"
 )
+
+func applyPatch(patchName string) (success bool) {
+	zboth.Debug().Msgf("Applying patch: %s", patchName)
+	if !conf.IsSet((joinKey(stateWord, patchWord))) {
+		var applied []string
+		conf.Set(joinKey(stateWord, patchWord), applied)
+	}
+	applied := conf.GetStringSlice((joinKey(stateWord, patchWord)))
+	zboth.Debug().Msgf("The following patches have been applied: %s.", strings.Join(applied, ", "))
+	if elementInSlice(patchName, &applied) == -1 {
+		switch patchName {
+		case "fix-173-ketcher":
+			// patch for ELN version 1.7.3 docker-compose.yml file
+			for _, givenName := range allInstances() {
+				gotoFolder(givenName)
+				var result []byte
+				var err error
+				compose := parseCompose(chemotionComposeFilename)
+				if compose.IsSet("services.ketchersvc.image") {
+					image := compose.GetString("services.ketchersvc.image")
+					if image == "ptrxyz/chemotion:ketchersvc-1.7.3" {
+						if result, err = execShell(toSprintf("cat %s | %s run -i --rm mikefarah/yq '.services.ketchersvc.image = \"ptrxyz/chemotion:ketchersvc-1.7.2\"'", chemotionComposeFilename, virtualizer)); err == nil {
+							yamlFile := pathlib.NewPath(chemotionComposeFilename)
+							err = yamlFile.WriteFile(result)
+						}
+						if err == nil {
+							zboth.Info().Msgf(color.Color(toSprintf("[red][bold]Instance %s has been patched. Please restart it ASAP.", givenName)))
+							success = true
+						} else {
+							zboth.Warn().Err(err).Msgf("Failed to update %s for %s. Patch not completely successful.", chemotionComposeFilename, givenName)
+						}
+					}
+				}
+				gotoFolder("work.dir")
+			}
+		}
+		if success {
+			zboth.Debug().Msgf("Successfully applied patch: %s", patchName)
+			applied = append(applied, patchName)
+			conf.Set((joinKey(stateWord, patchWord)), applied)
+			if existingFile(conf.ConfigFileUsed()) {
+				if err := writeConfig(false); err != nil {
+					zboth.Warn().Err(err).Msgf("Failed to rewrite config file. You will need to add `%s: - %s` to the %s file manually.", joinKey(stateWord, patchWord), patchName, conf.ConfigFileUsed())
+				}
+			}
+		}
+	} else {
+		success = true
+	}
+	return
+}
 
 func upgradeThisTool(transition string) (success bool) {
 	switch transition {
