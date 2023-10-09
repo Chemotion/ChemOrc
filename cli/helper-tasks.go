@@ -11,33 +11,39 @@ import (
 )
 
 func applyPatch(patchName string) (success bool) {
-	zboth.Debug().Msgf("Applying patch: %s", patchName)
-	if !conf.IsSet((joinKey(stateWord, patchWord))) {
-		var applied []string
+	var applied []string
+	if conf.IsSet((joinKey(stateWord, patchWord))) {
+		applied = conf.GetStringSlice((joinKey(stateWord, patchWord)))
+		zboth.Debug().Msgf("The following patches have been applied: %s.", strings.Join(applied, ", "))
+	} else {
 		conf.Set(joinKey(stateWord, patchWord), applied)
+		zboth.Debug().Msg("No patch has been applied so far.")
 	}
-	applied := conf.GetStringSlice((joinKey(stateWord, patchWord)))
-	zboth.Debug().Msgf("The following patches have been applied: %s.", strings.Join(applied, ", "))
-	if elementInSlice(patchName, &applied) == -1 {
+	if elementInSlice(patchName, &applied) != -1 {
+		success = true
+	} else {
 		switch patchName {
 		case "fix-173-ketcher":
+			zboth.Debug().Msgf("Applying patch: %s", patchName)
 			// patch for ELN version 1.7.3 docker-compose.yml file
+			success = true
 			for _, givenName := range allInstances() {
 				gotoFolder(givenName)
 				var result []byte
 				var err error
 				compose := parseCompose(chemotionComposeFilename)
 				if compose.IsSet("services.ketchersvc.image") {
-					image := compose.GetString("services.ketchersvc.image")
-					if image == "ptrxyz/chemotion:ketchersvc-1.7.3" {
+					eln_image := compose.GetString("services.eln.image")
+					ketcher_image := compose.GetString("services.ketchersvc.image")
+					if eln_image == "ptrxyz/chemotion:eln-1.7.3" && ketcher_image == "ptrxyz/chemotion:ketchersvc-1.7.3" {
 						if result, err = execShell(toSprintf("cat %s | %s run -i --rm mikefarah/yq '.services.ketchersvc.image = \"ptrxyz/chemotion:ketchersvc-1.7.2\"'", chemotionComposeFilename, virtualizer)); err == nil {
 							yamlFile := pathlib.NewPath(chemotionComposeFilename)
 							err = yamlFile.WriteFile(result)
 						}
 						if err == nil {
 							zboth.Info().Msgf(color.Color(toSprintf("[red][bold]Instance %s has been patched. Please restart it ASAP.", givenName)))
-							success = true
 						} else {
+							success = false
 							zboth.Warn().Err(err).Msgf("Failed to update %s for %s. Patch not completely successful.", chemotionComposeFilename, givenName)
 						}
 					}
@@ -55,8 +61,6 @@ func applyPatch(patchName string) (success bool) {
 				}
 			}
 		}
-	} else {
-		success = true
 	}
 	return
 }
