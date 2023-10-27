@@ -15,10 +15,10 @@ import (
 // helper to determine the required compose file
 func getComposeAddressToUse(currentVersion, action string) (use string) {
 	versions := make(map[string]string)
-	latestForThisCLIRelease := "1.7.3"
-	orderVersions := []string{latestForThisCLIRelease, "1.7.2", "1.6.2", "1.5.4"} // descending order
-	versions[latestForThisCLIRelease] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/b8bb1280a6e042b96b8d3e71d030709b113686bc/payload/docker-compose.yml"
-	versions["1.7.2"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/b07becc0f421a76aaee6f9e32ed6bf49f942258b/payload/docker-compose.yml"
+	latestForThisCLIRelease := "1.8.0"
+	orderVersions := []string{latestForThisCLIRelease, "1.7.3", "1.6.2", "1.5.4"} // descending order
+	versions[latestForThisCLIRelease] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/0664a5667d06da7898e83a11e31e4b471235daf1/payload/docker-compose.yml"
+	versions["1.7.3"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/b8bb1280a6e042b96b8d3e71d030709b113686bc/payload/docker-compose.yml"
 	versions["1.6.2"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/e577832edaba14fa21ee9aa9288e4b00052729c8/payload/docker-compose.yml"
 	versions["1.5.4"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/548ead617a552307f30d5051e72c01d95e99b30f/payload/docker-compose.yml"
 	validVersions := []string{}
