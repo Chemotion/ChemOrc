@@ -37,6 +37,7 @@ services:
     restart: unless-stopped
     environment:
       - CONFIG_ROLE=worker
+      - SECRET_KEY_BASE=pleasechangeme
     depends_on:
       - db
       - eln
