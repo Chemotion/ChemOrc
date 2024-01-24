@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10559380.svg)](https://doi.org/10.5281/zenodo.10559380)
+
 # ChemCLI
 
 ChemCLI, short for Chemotion CLI, is a tool to help you manage Chemotion ELN on a machine. The goal is to make installation, maintenance and upgradation of (multiple instances of) Chemotion as easy as possible.
@@ -213,6 +215,6 @@ Then please have a look at the `docker-compose.cli.yml` files in the `instances`
 
 This project has been funded by the **[DFG](https://www.dfg.de/)**.
 
-![DFG Logo](https://www.dfg.de/zentralablage/bilder/service/logos_corporate_design/logo_negativ_267.png)
+![DFG Logo](https://chemotion.net/img/logos/DFG_logo_inverted.png)
 
 Funded by the [Deutsche Forschungsgemeinschaft (DFG, German Research Foundation)](https://www.dfg.de/) under the [National Research Data Infrastructure – NFDI4Chem](https://nfdi4chem.de/) project – Projektnummer **441958208** – since 2020.
