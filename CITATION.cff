@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+title: ChemCLI
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Shashank Shekhar
+    family-names: Harivyasi
+    affiliation: Karlsruhe Institute of Technology
+    orcid: "https://orcid.org/0000-0002-2174-5226"
+  - affiliation: Karlsruhe Institute of Technology
+    orcid: "https://orcid.org/0000-0002-5869-352X"
+    given-names: Peter
+    family-names: Krauß
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.10559380
+    description: >-
+      This is the collection of archived snapshots of all
+      versions starting from version 0.2.16.
+repository-code: "https://github.com/Chemotion/ChemCLI"
+url: "https://chemotion.net/docs"
+abstract: >-
+  ChemCLI, short for Chemotion CLI, is a tool to help you
+  manage Chemotion ELN on a machine. The goal is to make
+  installation, maintenance and upgradation of (multiple
+  instances of) Chemotion as easy as possible.
+keywords:
+  - CLI
+  - Software
+  - Chemistry
+  - ELN
+  - Chemotion
+license: BSD-3-Clause
