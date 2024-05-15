@@ -130,8 +130,10 @@ func fileValidate(input string) (err error) {
 // kind of opposite of instanceValidate
 func newInstanceValidate(input string) (err error) {
 	err = textValidate(input)
-	if strings.ContainsRune(input, '.') {
-		err = toError("cannot have `.` in an instance name")
+	for _, char := range []rune{'.', '/', '\\', ':'} {
+		if strings.ContainsRune(input, char) {
+			err = toError("cannot have `%c` in an instance name", char)
+		}
 	}
 	if toLower(input) != input {
 		err = toError("cannot have an uppercase letter") // because case is not preserved by Viper v1.x

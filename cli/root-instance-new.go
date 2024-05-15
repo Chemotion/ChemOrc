@@ -15,12 +15,12 @@ import (
 // helper to determine the required compose file
 func getComposeAddressToUse(currentVersion, action string) (use string) {
 	versions := make(map[string]string)
-	latestForThisCLIRelease := "1.8.2"
-	orderVersions := []string{latestForThisCLIRelease, "1.8.1", "1.7.3", "1.6.2"} // descending order
-	versions[latestForThisCLIRelease] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/7a62248a40416586e5d5e7d1a77adb6fe4f360fe/payload/docker-compose.yml"
-	versions["1.8.1"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/681cab48409d6c9a6be51ac5903e04890467d998/payload/docker-compose.yml"
+	latestForThisCLIRelease := "1.9.3"
+	orderVersions := []string{latestForThisCLIRelease, "1.9.2", "1.8.2", "1.7.3"} // descending order
+	versions[latestForThisCLIRelease] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/b7ad83fba1e1db6c5525a11b06bf7eed59a769f6/payload/docker-compose.yml"
+	versions["1.9.2"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/f30d8ae2dfdfb0160c3ceef30d5540e404c4f23a/payload/docker-compose.yml"
+	versions["1.8.2"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/7a62248a40416586e5d5e7d1a77adb6fe4f360fe/payload/docker-compose.yml"
 	versions["1.7.3"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/b8bb1280a6e042b96b8d3e71d030709b113686bc/payload/docker-compose.yml"
-	versions["1.6.2"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/e577832edaba14fa21ee9aa9288e4b00052729c8/payload/docker-compose.yml"
 	validVersions := []string{}
 	for _, version := range orderVersions {
 		now, _ := vercompare.NewVersion(currentVersion)
@@ -116,12 +116,6 @@ func getFreshPort(kind string) (port uint64) {
 		}
 	}
 	return
-}
-
-// to create a development instance
-func instanceCreateDevelopment(details map[string]string) (success bool) {
-	zboth.Fatal().Err(toError("not implemented")).Msgf("This feature - development instances of chemotion - is currently under development.")
-	return false
 }
 
 func createExtendedCompose(details map[string]string, use string) (extendedCompose viper.Viper) {
@@ -332,9 +326,7 @@ var newInstanceRootCmd = &cobra.Command{
 					zboth.Info().Msgf("Successfully created a new production instance. Once switched on, it can be found at: %s", details["accessAddress"])
 				}
 			case "Development":
-				if success := instanceCreateDevelopment(details); success {
-					zboth.Info().Msgf("Successfully created a new development instance.")
-				}
+				zboth.Fatal().Err(toError("not implemented")).Msgf("This feature - deployment of development instances of chemotion using ChemCLI - is currently under development.")
 			}
 		}
 	},

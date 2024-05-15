@@ -8,7 +8,7 @@ import (
 )
 
 func instancePing(givenName string) (response string) {
-	url := conf.GetString(joinKey(instancesWord, currentInstance, "accessAddress"))
+	url := conf.GetString(joinKey(instancesWord, givenName, "accessAddress"))
 	client := http.Client{Timeout: 2 * time.Second}
 	if req, err := http.NewRequest("HEAD", url, nil); err == nil {
 		if resp, err := client.Do(req); err == nil {
