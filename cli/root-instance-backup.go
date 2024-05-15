@@ -3,29 +3,32 @@ package cli
 import (
 	"strings"
 
-	"github.com/chigopher/pathlib"
 	"github.com/spf13/cobra"
 )
 
 func instanceBackup(givenName, portion string) {
-	calledCmd := toSprintf("--profile execution run --rm -e BACKUP_WHAT=%s executor chemotion backup", portion)
-	var backupFile pathlib.Path
-	if strings.HasSuffix(conf.GetString(joinKey(instancesWord, currentInstance, "image")), "eln-1.3.1p220712") {
-		backupFile = downloadFile(backupshURL, "temp.backup.sh")
-		var err error
-		var output string
-		var out []byte
-		commands := []string{"create --name backcon ptrxyz/chemotion:eln-1.3.1p220712", "cp temp.backup.sh backcon:/embed/scripts/backup.sh", "commit backcon ptrxyz/chemotion:eln-1.3.1p220712", "rm backcon"}
-		for _, comm := range commands {
-			out, err = execShell(toSprintf("%s %s", virtualizer, comm))
-			output = toSprintf("%s %s", output, out)
-			if err != nil {
-				zboth.Fatal().Err(err).Msgf("command failed: %s %s", virtualizer, comm)
+	if strings.HasSuffix(conf.GetString(joinKey(instancesWord, givenName, "image")), "eln-1.3.1p220712") {
+		func() { // for version 1.3.1p220712
+
+			backupFile := downloadFile(backupshURL, "temp.backup.sh")
+			var (
+				err    error
+				output string
+				out    []byte
+			)
+			commands := []string{"create --name backcon ptrxyz/chemotion:eln-1.3.1p220712", "cp temp.backup.sh backcon:/embed/scripts/backup.sh", "commit backcon ptrxyz/chemotion:eln-1.3.1p220712", "rm backcon"}
+			for _, comm := range commands {
+				out, err = execShell(toSprintf("%s %s", virtualizer, comm))
+				output = toSprintf("%s %s", output, out)
+				if err != nil {
+					zboth.Fatal().Err(err).Msgf("command failed: %s %s", virtualizer, comm)
+				}
 			}
-		}
-		zboth.Debug().Msgf(output)
-		backupFile.Remove()
+			zboth.Debug().Msgf(output)
+			backupFile.Remove()
+		}()
 	}
+	calledCmd := toSprintf("--profile execution run --rm -e BACKUP_WHAT=%s executor chemotion backup", portion)
 	if _, successBackUp, _ := gotoFolder(givenName), callVirtualizer(composeCall+calledCmd), gotoFolder("work.dir"); successBackUp {
 		zboth.Info().Msgf("Backup successful.")
 	} else {
