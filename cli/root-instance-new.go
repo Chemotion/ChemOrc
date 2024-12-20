@@ -15,9 +15,9 @@ import (
 // helper to determine the required compose file
 func getComposeAddressToUse(currentVersion, action string) (use string) {
 	versions := make(map[string]string)
-	latestForThisCLIRelease := "1.10.2"
+	latestForThisCLIRelease := "1.10.5"
 	orderVersions := []string{latestForThisCLIRelease, "1.9.3", "1.8.2", "1.7.3"} // descending order
-	versions[latestForThisCLIRelease] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/d2a5994bfe602c63211b90b161d20b27f99ca8e0/payload/docker-compose.yml"
+	versions[latestForThisCLIRelease] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/3a9339fe7156da32d786975482aa97c993a997b9/payload/docker-compose.yml"
 	versions["1.9.3"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/b7ad83fba1e1db6c5525a11b06bf7eed59a769f6/payload/docker-compose.yml"
 	versions["1.8.2"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/7a62248a40416586e5d5e7d1a77adb6fe4f360fe/payload/docker-compose.yml"
 	versions["1.7.3"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/b8bb1280a6e042b96b8d3e71d030709b113686bc/payload/docker-compose.yml"
