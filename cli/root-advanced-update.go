@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/chigopher/pathlib"
-	api_gh "github.com/google/go-github/github"
+	api_gh "github.com/google/go-github/v72/github"
 	vercompare "github.com/hashicorp/go-version"
 	"github.com/spf13/cobra"
 )

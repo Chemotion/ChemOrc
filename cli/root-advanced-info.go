@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/chigopher/pathlib"
-	"github.com/shirou/gopsutil/disk"
-	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/v4/disk"
+	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/spf13/cobra"
 )
 
