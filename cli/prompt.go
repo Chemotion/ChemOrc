@@ -172,8 +172,8 @@ func selectInstance(action string) (instance string) {
 	if len(existingInstances) < 6 {
 		instance = selectOpt(existingInstances, toSprintf("Please pick the instance to %s:", action))
 	} else {
-		zboth.Info().Msgf(strings.Join(append([]string{"The following instances exist: "}, allInstances()...), "\n"))
-		zlog.Debug().Msgf("String prompt to select instance")
+		zboth.Info().Msg(strings.Join(append([]string{"The following instances exist: "}, allInstances()...), "\n"))
+		zlog.Debug().Msg("String prompt to select instance")
 		instance = getString("Please name the instance to "+action, instanceValidate)
 	}
 	return
@@ -182,7 +182,7 @@ func selectInstance(action string) (instance string) {
 // to get a new password
 func getPassword() (password string) {
 	if zerolog.GlobalLevel() == zerolog.DebugLevel {
-		zboth.Warn().Err(toError("password in debug mode")).Msgf(color.Color("You are gathering password while in debug mode. [red]!!! The password will be stored in the log file as plain-text !!![reset] Exit now to avoid this."))
+		zboth.Warn().Err(toError("password in debug mode")).Msg(color.Color("You are gathering password while in debug mode. [red]!!! The password will be stored in the log file as plain-text !!![reset] Exit now to avoid this."))
 	}
 	prompt := promptui.Prompt{
 		Label:       "Please enter new password",

@@ -63,7 +63,7 @@ var removeInstanceRootCmd = &cobra.Command{
 			if cmd.Flag("name").Changed {
 				givenName = cmd.Flag("name").Value.String()
 				if err := instanceValidate(givenName); err != nil {
-					zboth.Fatal().Err(err).Msgf(err.Error())
+					zboth.Fatal().Err(err).Msg(err.Error())
 				}
 			} else {
 				isInteractive(true)
@@ -96,7 +96,7 @@ var removeInstanceRootCmd = &cobra.Command{
 			}
 		}
 		if err := instanceRemove(givenName, force); err != nil {
-			zboth.Warn().Err(err).Msgf(err.Error())
+			zboth.Warn().Err(err).Msg(err.Error())
 		}
 	},
 }

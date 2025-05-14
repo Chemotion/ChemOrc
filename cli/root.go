@@ -68,7 +68,7 @@ const (
 // configuration and logging
 var (
 	// version number, here to allow override
-	versionCLI = "0.2.19"
+	versionCLI = "0.2.20"
 	// current shell
 	shell string
 	// currently selected instance
@@ -120,14 +120,14 @@ var rootCmd = &cobra.Command{
 			if err := instanceValidate(currentInstance); err == nil {
 				zboth.Info().Msgf("The instance you are currently managing is %s.", color.Color(toSprintf("[green]%s", currentInstance)))
 			} else {
-				zboth.Fatal().Err(err).Msgf(err.Error())
+				zboth.Fatal().Err(err).Msg(err.Error())
 			}
 		}
 		if updateRequired(false) {
-			zboth.Info().Msgf(color.Color(toSprintf("[yellow][bold]There is a new version of %s available.", nameCLI)))
+			zboth.Info().Msg(color.Color(toSprintf("[yellow][bold]There is a new version of %s available.", nameCLI)))
 		}
 		if toUpgrade := upgradeRequired(); len(toUpgrade) > 0 {
-			zboth.Info().Msgf(color.Color(toSprintf("[red][bold]The following instance(s) can be upgraded: %s.", strings.Join(toUpgrade, ", "))))
+			zboth.Info().Msg(color.Color(toSprintf("[red][bold]The following instance(s) can be upgraded: %s.", strings.Join(toUpgrade, ", "))))
 		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {

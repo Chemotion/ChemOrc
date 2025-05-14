@@ -24,7 +24,7 @@ func instanceBackup(givenName, portion string) {
 					zboth.Fatal().Err(err).Msgf("command failed: %s %s", virtualizer, comm)
 				}
 			}
-			zboth.Debug().Msgf(output)
+			zboth.Debug().Msg(output)
 			backupFile.Remove()
 		}()
 	}

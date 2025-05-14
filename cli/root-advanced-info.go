@@ -48,8 +48,8 @@ func systemInfo() {
 	info := getSystemInfo()
 	if isInteractive(false) {
 		if conf.GetBool(joinKey(stateWord, "debug")) {
-			zboth.Info().Msgf("Also writing all information in the log file.")
-			zlog.Debug().Msgf(info)
+			zboth.Info().Msg("Also writing all information in the log file.")
+			zlog.Debug().Msg(info)
 		}
 		fmt.Println("This is what we know about the host machine:")
 		fmt.Println(info)
@@ -59,7 +59,7 @@ func systemInfo() {
 			zboth.Info().Msgf("Written %s containing system information.", sysFilename)
 		} else {
 			zboth.Warn().Err(err).Msgf("Failed to write system.info. Writing all information in the log file instead.")
-			zlog.Info().Msgf(info)
+			zlog.Info().Msg(info)
 		}
 	}
 }
