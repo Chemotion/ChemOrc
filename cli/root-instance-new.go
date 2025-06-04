@@ -17,7 +17,7 @@ func getComposeAddressToUse(currentVersion, action string) (use string) {
 	versions := make(map[string]string)
 	latestForThisCLIRelease := "2.0.0"
 	orderVersions := []string{latestForThisCLIRelease, "1.10.5", "1.9.3"} // descending order
-	versions[latestForThisCLIRelease] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/dd96835da1db7d787585aadd354ec6553366225f/payload/docker-compose.yml"
+	versions[latestForThisCLIRelease] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/ff2912587c554698be33b8b199b416424e19e381/payload/docker-compose.yml"
 	versions["1.10.5"] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/3a9339fe7156da32d786975482aa97c993a997b9/payload/docker-compose.yml"
 	versions["1.9.3"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/b7ad83fba1e1db6c5525a11b06bf7eed59a769f6/payload/docker-compose.yml"
 	validVersions := []string{}
