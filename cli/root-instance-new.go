@@ -125,7 +125,7 @@ func createExtendedCompose(details map[string]string, use string) (extendedCompo
 	// create an additional service to run commands
 	extendedCompose.Set(joinKey("services", "executor", "image"), compose.GetString(joinKey("services", primaryService, "image")))
 	extendedCompose.Set(joinKey("services", "executor", "volumes"), compose.GetStringSlice(joinKey("services", primaryService, "volumes")))
-	extendedCompose.Set(joinKey("services", "executor", "environment"), []string{toSprintf("CONFIG_ROLE=%s", primaryService)})
+	extendedCompose.Set(joinKey("services", "executor", "environment"), []string{toSprintf("CONFIG_ROLE=%s", primaryService), "RUBYOPT=-W0"})
 	extendedCompose.Set(joinKey("services", "executor", "depends_on"), []string{"db"})
 	extendedCompose.Set(joinKey("services", "executor", "networks"), []string{"chemotion"})
 	extendedCompose.Set(joinKey("services", "executor", "profiles"), []string{"execution"})
