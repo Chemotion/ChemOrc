@@ -38,7 +38,7 @@ ChemCLI tool supports the following versions of Chemotion ELN:
 
 The commands have the following general layout:
 
-```
+```text
 general: cli-executable  <resource>  <command>  <flags>
          └─────┬──────┘  └───┬────┘  └───┬───┘  └──┬──┘
 example:    chemCLI       instance     logs     --all
@@ -59,14 +59,16 @@ Following features have been implemented:
 
 ### Getting the tool
 
-The ChemCLI tool is a binary file called `chemCLI` and needs no installation. The only prerequisite is that you install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (and, on Windows, [WSL](https://docs.microsoft.com/en-us/windows/wsl/install)). Depending on your OS, you can download the latest release of the CLI from [here](https://github.com/Chemotion/ChemCLI/releases/). Builds for the following systems are available:
+The ChemCLI tool is a binary file called `chemCLI` and needs no installation. The only prerequisite is that you install [Docker Engine](https://docs.docker.com/engine/install/) on Linux. In the rare scenario that your server is running Windows or Mac, you can make use of [Docker Desktop](https://docs.docker.com/desktop/) which comes with a GUI. Builds for the following systems are available:
+
+> Depending on your OS, you can go to [GitHub and download the latest release of the CLI](https://github.com/Chemotion/ChemCLI/releases/).
 
 - Linux, amd64
-- Windows, amd64; remember to turn on [Docker integration with WSL](https://docs.docker.com/desktop/windows/wsl/)
+- Windows, amd64
 - macOS, apple-silicon
 - macOS, amd64
 
-Please be sure that you have both, `docker` and `docker compose` commands. This should be the case if you install Docker Desktop following the instructions [here](https://docs.docker.com/desktop/#download-and-install). If you choose to install only Docker Engine, then please make sure that you **also** have `docker compose` as a command (as opposed to `docker-compose`). On Linux, you might have to install the [`docker-compose-plugin`](https://docs.docker.com/compose/install/linux/#install-using-the-repository) to achieve this.
+Please be sure that you have both, `docker` and `docker compose` commands. This should be the case if you installed Docker Desktop. If you choose to install only Docker Engine, then please make sure that you **also** have `docker compose` as a command (as opposed to `docker-compose`). On Linux, you might have to install the [`docker-compose-plugin`](https://docs.docker.com/compose/install/linux/#install-using-the-repository) to achieve this.
 
 These binary builds should not rely on libraries of the underlying operating system: if they still do not work on your system for some reason, please create an [issue here](https://github.com/Chemotion/ChemCLI/issues) and we will try to provide you a binary build as soon as possible. If you feel like it, you can always compile the `go` source code on your own.
 
@@ -133,7 +135,7 @@ If running this as a [cron](https://en.wikipedia.org/wiki/Cron) job, remember to
 0 3 * * 2-6 cd /home/admin/installations/chemotion_ELN && ./chemCLI instance backup -i prodinstance -q
 ```
 
-Please also refer to the notes [here](manual_install#backing-up-and-restoring-your-data) for a better understanding of the backup process.
+Please also refer to the notes on [manual installation](https://chemotion.net/docs/eln/install_configure/manual_install#backing-up-and-restoring-your-data) for a better understanding of the backup process.
 
 ### Upgrading an instance (for ELN versions 1.3 and above)
 
