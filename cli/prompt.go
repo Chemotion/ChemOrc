@@ -71,6 +71,8 @@ func emailValidate(input string) (err error) {
 	if err = textValidate(input); err == nil {
 		if strings.Count(input, "@") != 1 || strings.Count(input, ".") < 1 {
 			err = toError("please input a valid email address")
+		} else if strings.Count(input, " ") > 0 {
+			err = toError("email address can not contain any spaces")
 		} else {
 			err = nil
 		}
