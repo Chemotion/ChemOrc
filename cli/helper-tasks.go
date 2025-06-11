@@ -41,7 +41,7 @@ func applyPatch(patchName string) (success bool) {
 							err = yamlFile.WriteFile(result)
 						}
 						if err == nil {
-							zboth.Info().Msgf(color.Color(toSprintf("[red][bold]Instance %s has been patched. Please restart it ASAP.", givenName)))
+							zboth.Info().Msg(color.Color(toSprintf("[red][bold]Instance %s has been patched. Please restart it ASAP.", givenName)))
 						} else {
 							success = false
 							zboth.Warn().Err(err).Msgf("Failed to update %s for %s. Patch not completely successful.", chemotionComposeFilename, givenName)

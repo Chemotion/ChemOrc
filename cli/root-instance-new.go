@@ -15,12 +15,11 @@ import (
 // helper to determine the required compose file
 func getComposeAddressToUse(currentVersion, action string) (use string) {
 	versions := make(map[string]string)
-	latestForThisCLIRelease := "1.10.5"
-	orderVersions := []string{latestForThisCLIRelease, "1.9.3", "1.8.2", "1.7.3"} // descending order
-	versions[latestForThisCLIRelease] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/3a9339fe7156da32d786975482aa97c993a997b9/payload/docker-compose.yml"
+	latestForThisCLIRelease := "2.0.1"
+	orderVersions := []string{latestForThisCLIRelease, "1.10.5", "1.9.3"} // descending order
+	versions[latestForThisCLIRelease] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/80b98a5ff121c541c7897a24d9554e232e2e04bd/payload/docker-compose.yml"
+	versions["1.10.5"] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/3a9339fe7156da32d786975482aa97c993a997b9/payload/docker-compose.yml"
 	versions["1.9.3"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/b7ad83fba1e1db6c5525a11b06bf7eed59a769f6/payload/docker-compose.yml"
-	versions["1.8.2"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/7a62248a40416586e5d5e7d1a77adb6fe4f360fe/payload/docker-compose.yml"
-	versions["1.7.3"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/b8bb1280a6e042b96b8d3e71d030709b113686bc/payload/docker-compose.yml"
 	validVersions := []string{}
 	for _, version := range orderVersions {
 		now, _ := vercompare.NewVersion(currentVersion)
@@ -126,7 +125,7 @@ func createExtendedCompose(details map[string]string, use string) (extendedCompo
 	// create an additional service to run commands
 	extendedCompose.Set(joinKey("services", "executor", "image"), compose.GetString(joinKey("services", primaryService, "image")))
 	extendedCompose.Set(joinKey("services", "executor", "volumes"), compose.GetStringSlice(joinKey("services", primaryService, "volumes")))
-	extendedCompose.Set(joinKey("services", "executor", "environment"), []string{toSprintf("CONFIG_ROLE=%s", primaryService)})
+	extendedCompose.Set(joinKey("services", "executor", "environment"), []string{toSprintf("CONFIG_ROLE=%s", primaryService), "RUBYOPT=-W0"})
 	extendedCompose.Set(joinKey("services", "executor", "depends_on"), []string{"db"})
 	extendedCompose.Set(joinKey("services", "executor", "networks"), []string{"chemotion"})
 	extendedCompose.Set(joinKey("services", "executor", "profiles"), []string{"execution"})

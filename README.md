@@ -26,22 +26,19 @@ ChemCLI, short for Chemotion CLI, is a tool to help you manage Chemotion ELN on 
 
 ChemCLI tool supports the following versions of Chemotion ELN:
 
-| ELN Version                                                              | `docker-compose.yml` file                                                                                                             | Supported by chemCLI version                                  |
-| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| [v1.10.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.10.5) | [eln-1.10.5](https://raw.githubusercontent.com/Chemotion/ChemOrc/3a9339fe7156da32d786975482aa97c993a997b9/payload/docker-compose.yml) | [0.2.x](https://github.com/Chemotion/ChemCLI/releases/latest) |
-| [v1.9.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.9.3)   | [eln-1.9.3](https://raw.githubusercontent.com/Chemotion/ChemOrc/b7ad83fba1e1db6c5525a11b06bf7eed59a769f6/payload/docker-compose.yml)  | [0.2.x](https://github.com/Chemotion/ChemCLI/releases/latest) |
-| [v1.8.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.8.2)   | [eln-1.8.2](https://raw.githubusercontent.com/Chemotion/ChemCLI/7a62248a40416586e5d5e7d1a77adb6fe4f360fe/payload/docker-compose.yml)  | [0.2.x](https://github.com/Chemotion/ChemCLI/releases/latest) |
-| [v1.7.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.7.3)   | [eln-1.7.3](https://raw.githubusercontent.com/Chemotion/ChemCLI/b8bb1280a6e042b96b8d3e71d030709b113686bc/payload/docker-compose.yml)  | [0.2.x](https://github.com/Chemotion/ChemCLI/releases/latest) |
+| ELN Version                                                              | `docker-compose.yml` file                                                                                                             |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| [v2.0.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v2.0.1)   | [eln-2.0.1](https://raw.githubusercontent.com/Chemotion/ChemOrc/80b98a5ff121c541c7897a24d9554e232e2e04bd/payload/docker-compose.yml)  |
+| [v1.10.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.10.5) | [eln-1.10.5](https://raw.githubusercontent.com/Chemotion/ChemOrc/3a9339fe7156da32d786975482aa97c993a997b9/payload/docker-compose.yml) |
+| [v1.9.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v1.9.3)   | [eln-1.9.3](https://raw.githubusercontent.com/Chemotion/ChemOrc/b7ad83fba1e1db6c5525a11b06bf7eed59a769f6/payload/docker-compose.yml)  |
 
-> Chemotion ELN versions 1.10.0 and 1.10.1 were not released as dockerized images, and therefore cannot be installed using this tool.
-
-> Chemotion ELN versions 1.6.x and below are not supported. Kindly update your instance as soon as possible. If required, please contact the [helpdesk](https://chemotion.net/helpdesk).
+> Chemotion ELN versions 1.8.x and below are no longer supported. Kindly update your instance as soon as possible. If required, please contact the [helpdesk](https://chemotion.net/helpdesk).
 
 ## Concept for chemCLI
 
 The commands have the following general layout:
 
-```
+```text
 general: cli-executable  <resource>  <command>  <flags>
          └─────┬──────┘  └───┬────┘  └───┬───┘  └──┬──┘
 example:    chemCLI       instance     logs     --all
@@ -62,14 +59,16 @@ Following features have been implemented:
 
 ### Getting the tool
 
-The ChemCLI tool is a binary file called `chemCLI` and needs no installation. The only prerequisite is that you install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (and, on Windows, [WSL](https://docs.microsoft.com/en-us/windows/wsl/install)). Depending on your OS, you can download the latest release of the CLI from [here](https://github.com/Chemotion/ChemCLI/releases/). Builds for the following systems are available:
+The ChemCLI tool is a binary file called `chemCLI` and needs no installation. The only prerequisite is that you install [Docker Engine](https://docs.docker.com/engine/install/) on Linux. In the rare scenario that your server is running Windows or Mac, you can make use of [Docker Desktop](https://docs.docker.com/desktop/) which comes with a GUI. Builds for the following systems are available:
+
+> Depending on your OS, you can go to [GitHub and download the latest release of the CLI](https://github.com/Chemotion/ChemCLI/releases/).
 
 - Linux, amd64
-- Windows, amd64; remember to turn on [Docker integration with WSL](https://docs.docker.com/desktop/windows/wsl/)
+- Windows, amd64
 - macOS, apple-silicon
 - macOS, amd64
 
-Please be sure that you have both, `docker` and `docker compose` commands. This should be the case if you install Docker Desktop following the instructions [here](https://docs.docker.com/desktop/#download-and-install). If you choose to install only Docker Engine, then please make sure that you **also** have `docker compose` as a command (as opposed to `docker-compose`). On Linux, you might have to install the [`docker-compose-plugin`](https://docs.docker.com/compose/install/linux/#install-using-the-repository) to achieve this.
+Please be sure that you have both, `docker` and `docker compose` commands. This should be the case if you installed Docker Desktop. If you choose to install only Docker Engine, then please make sure that you **also** have `docker compose` as a command (as opposed to `docker-compose`). On Linux, you might have to install the [`docker-compose-plugin`](https://docs.docker.com/compose/install/linux/#install-using-the-repository) to achieve this.
 
 These binary builds should not rely on libraries of the underlying operating system: if they still do not work on your system for some reason, please create an [issue here](https://github.com/Chemotion/ChemCLI/issues) and we will try to provide you a binary build as soon as possible. If you feel like it, you can always compile the `go` source code on your own.
 
@@ -86,7 +85,7 @@ These binary builds should not rely on libraries of the underlying operating sys
 
 ^On macOS, if the there is a security pop-up when running the command, please also `Allow` the executable in `System Preferences > Security & Privacy`.
 
-#### Important Notes:
+#### Important Notes
 
 - All commands here, and all the documentation of the tool, use `./chemCLI` when describing how to run the executable. However, your specific command to run the executable is given in the table above.
 - If possible, do not rename the executable, or rename/remove files and folders created by it. All reasonable operations can be done using chemCLI; manual operations might break the chemCLI's ability to understand how things are laid out on your machine.
@@ -136,7 +135,7 @@ If running this as a [cron](https://en.wikipedia.org/wiki/Cron) job, remember to
 0 3 * * 2-6 cd /home/admin/installations/chemotion_ELN && ./chemCLI instance backup -i prodinstance -q
 ```
 
-Please also refer to the notes [here](manual_install#backing-up-and-restoring-your-data) for a better understanding of the backup process.
+Please also refer to the notes on [manual installation](https://chemotion.net/docs/eln/install_configure/manual_install#backing-up-and-restoring-your-data) for a better understanding of the backup process.
 
 ### Upgrading an instance (for ELN versions 1.3 and above)
 

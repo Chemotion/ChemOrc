@@ -1,6 +1,4 @@
 {
-  "spellright.language": ["en"],
-  "spellright.documentTypes": ["markdown", "latex", "plaintext"],
   "gopls": {
     "ui.semanticTokens": true
   }

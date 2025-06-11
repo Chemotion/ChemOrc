@@ -165,7 +165,7 @@ func instanceUpgrade(givenName, use string) {
 		if errRestore := oldComposeFile.Rename(workDir.Join(instancesWord, name, chemotionComposeFilename)); errRestore == nil {
 			zboth.Fatal().Err(err).Msg(msg)
 		} else {
-			zboth.Warn().Err(err).Msgf(msg)
+			zboth.Warn().Err(err).Msg(msg)
 			zboth.Fatal().Err(errRestore).Msgf("Failed to restore the old compose file %s. Instance will fail to restart. Rename it manually. ABORT!", oldComposeFile.String())
 		}
 	}
@@ -185,7 +185,11 @@ var upgradeInstanceRootCmd = &cobra.Command{
 		}
 		if !pull && isInteractive(false) {
 			_, currentVersion, _ := strings.Cut(conf.GetString(joinKey(instancesWord, currentInstance, "image")), "-")
-			use = getComposeAddressToUse(currentVersion, "upgrade to")
+			if cmd.Flag("use").Changed {
+				use = cmd.Flag("use").Value.String()
+			} else {
+				use = getComposeAddressToUse(currentVersion, "upgrade to")
+			}
 			switch selectOpt([]string{"all actions: pull image, backup and upgrade", "preparation: pull image and backup", "upgrade only (if already prepared)", "pull image only", coloredExit}, "What do you want to do") {
 			case "all actions: pull image, backup and upgrade":
 				pull, backup, stop, upgrade = true, true, true, true

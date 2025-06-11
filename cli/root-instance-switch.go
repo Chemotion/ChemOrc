@@ -27,7 +27,7 @@ var switchInstanceRootCmd = &cobra.Command{
 			if cmd.Flag("name").Changed {
 				givenName := cmd.Flag("name").Value.String()
 				if err := instanceValidate(givenName); err != nil {
-					zboth.Fatal().Err(err).Msgf(err.Error())
+					zboth.Fatal().Err(err).Msg(err.Error())
 				}
 				instanceSwitch(givenName)
 			} else {
@@ -38,7 +38,7 @@ var switchInstanceRootCmd = &cobra.Command{
 			if isInteractive(false) {
 				instanceSwitch(selectInstance("switch to"))
 			} else {
-				zboth.Fatal().Err(toError("unexpected operation")).Msgf("Please repeat your actions with the `--debug` flag and report this error.")
+				zboth.Fatal().Err(toError("unexpected operation")).Msg("Please repeat your actions with the `--debug` flag and report this error.")
 			}
 		}
 	},

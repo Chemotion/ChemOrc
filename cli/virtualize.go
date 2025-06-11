@@ -41,7 +41,7 @@ func confirmVirtualizer(minimum string) {
 		} else if err.Error() == "exit status 127" { // 127 is software not found
 			zboth.Fatal().Err(toError("%s not found", virtualizer)).Msgf("%s is necessary to run %s using %s", virtualizer, nameProject, nameCLI)
 		} else {
-			zboth.Fatal().Err(err).Msgf(err.Error())
+			zboth.Fatal().Err(err).Msg(err.Error())
 		}
 	}
 }

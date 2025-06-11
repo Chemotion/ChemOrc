@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/chigopher/pathlib"
-	api_gh "github.com/google/go-github/github"
+	api_gh "github.com/google/go-github/v72/github"
 	vercompare "github.com/hashicorp/go-version"
 	"github.com/spf13/cobra"
 )
@@ -16,7 +16,7 @@ func selfUpdate(version string) {
 	oldVersion := pathlib.NewPath(commandForCLI)
 	stat, _ := oldVersion.Stat()
 	cliFileName := oldVersion.Name()
-	url := toSprintf("%s/releases/download/%s/%s", repositoryGH, version, nameCLI)
+	url := toSprintf("%s/releases/download/%s/%s", repositoryGH, version, cliFileName)
 	newVersion := downloadFile(url, workDir.Join(toSprintf("%s.new", cliFileName)).String())
 	if err := newVersion.Chmod(stat.Mode() | 100); err != nil { // make sure that it remains executable for the ErrUseLastResponse
 		zboth.Warn().Err(err).Msgf("Could not grant executable permission to the downloaded file. Please do it yourself.")

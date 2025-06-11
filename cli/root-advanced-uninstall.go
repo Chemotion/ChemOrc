@@ -15,7 +15,7 @@ func advancedUninstall(removeLogfile bool) {
 		for _, inst := range existingInstances {
 			zboth.Info().Msgf("Removing instance called %s.", inst)
 			if err := instanceRemove(inst, true); err != nil {
-				zboth.Warn().Err(err).Msgf(err.Error())
+				zboth.Warn().Err(err).Msg(err.Error())
 				zboth.Fatal().Err(toError("uninstalled failed")).Msgf("Uninstall failed while trying to remove %s", inst)
 			}
 		}
