@@ -10,6 +10,7 @@ services:
       - chemotion
     environment:
       - PGAUTO_ONESHOT=yes
+      - PGAUTO_REINDEX=yes
  
   db:
     image: ptrxyz/chemotion:db-2.0.1
