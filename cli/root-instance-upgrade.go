@@ -176,18 +176,17 @@ var upgradeInstanceRootCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Short: "Upgrade (the selected) instance of " + nameCLI,
 	Run: func(cmd *cobra.Command, _ []string) {
-		var pull, backup, stop, upgrade bool = false, false, false, true
+		var check, pull, backup, stop, upgrade bool = true, false, false, false, true
 		var use string = composeURL
 		if ownCall(cmd) {
 			use = cmd.Flag("use").Value.String()
+			check = !cmd.Flag("use").Changed
 			pull = toBool(cmd.Flag("pull-only").Value.String())
 			upgrade = !pull
 		}
 		if !pull && isInteractive(false) {
 			_, currentVersion, _ := strings.Cut(conf.GetString(joinKey(instancesWord, currentInstance, "image")), "-")
-			if cmd.Flag("use").Changed {
-				use = cmd.Flag("use").Value.String()
-			} else {
+			if check {
 				use = getComposeAddressToUse(currentVersion, "upgrade to")
 			}
 			switch selectOpt([]string{"all actions: pull image, backup and upgrade", "preparation: pull image and backup", "upgrade only (if already prepared)", "pull image only", coloredExit}, "What do you want to do") {
