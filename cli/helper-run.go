@@ -110,11 +110,24 @@ func getInternalName(givenName string) (name string) {
 func getColumn(givenName, column, service string) (values []string) {
 	name := getInternalName(givenName)
 	filterStr := toSprintf("--filter \"label=net.chemotion.cli.project=%s\"", name)
-	if service != "" {
+	if service != "" { // for a specific service
 		filterStr += toSprintf(" --filter name=%s", service)
 	}
-	if res, err := execShell(toSprintf("%s ps -a %s --format \"{{.%s}}\"", virtualizer, filterStr, column)); err == nil {
-		values = strings.Split(string(res), "\n")
+	if column == "Status" {
+		if res, err := execShell(toSprintf("%s ps -a %s --format \"{{.Status}} {{.Names}}\"", virtualizer, filterStr)); err == nil {
+			lines := strings.Split(string(res), "\n")
+			for _, line := range lines {
+				if strings.Contains(line, "dbupgrade") { // ignore dbupgrade containers when checking for instance status
+					continue
+				} else {
+					values = append(values, line)
+				}
+			}
+		}
+	} else { // for all other kinds of column, currently the only one used is "Names", for getInternalName
+		if res, err := execShell(toSprintf("%s ps -a %s --format \"{{.%s}}\"", virtualizer, filterStr, column)); err == nil {
+			values = strings.Split(string(res), "\n")
+		}
 	}
 	return
 }

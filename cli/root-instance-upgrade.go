@@ -211,7 +211,7 @@ var upgradeInstanceRootCmd = &cobra.Command{
 		}
 		if upgrade {
 			status := instanceStatus(currentInstance)
-			if elementInSlice(status, &[]string{"Exited", "Created"}) == -1 {
+			if elementInSlice(status, &[]string{"Exited", "Created", "Created and Exited", "Exited and Created"}) == -1 {
 				zboth.Fatal().Err(toError("upgrade fail; instance is %s", status)).Msgf("Cannot upgrade an instance that is not properly shut down. Please turn it off before continuing.")
 			}
 			instanceUpgrade(currentInstance, use)
