@@ -1,17 +1,9 @@
 services:
   dbupgrade:
-    image: pgautoupgrade/pgautoupgrade:16-bookworm
-    container_name: dbupgrade
+    image: ptrxyz/chemotion:dbupgrade-2.0.1
     volumes:
       - chemotion_db:/var/lib/postgresql/data/
     restart: "no"
-    networks:
-      - chemotion
-    environment:
-      - PGAUTO_ONESHOT=yes
-      - PGAUTO_REINDEX=yes
-      - POSTGRES_PASSWORD=postgres
-
   db:
     image: ptrxyz/chemotion:db-2.0.1
     restart: unless-stopped
