@@ -54,7 +54,7 @@ func getComposeAddressToUse(currentVersion, action string) (use string) {
 }
 
 // helper to get a compose file
-func parseCompose(use string) (compose viper.Viper) {
+func parseAndPullCompose(use string, pull bool) (compose viper.Viper) {
 	var (
 		composeFilepath pathlib.Path
 		isUrl           bool
@@ -70,6 +70,11 @@ func parseCompose(use string) (compose viper.Viper) {
 			zboth.Fatal().Err(err).Msgf("Failed to download the file from URL: %s.", use)
 		} else {
 			zboth.Fatal().Err(err).Msgf("Failed: %s file not found.", use)
+		}
+	}
+	if pull {
+		if success := callVirtualizer(toSprintf("compose -f %s pull", composeFilepath.String())); !success {
+			zboth.Warn().Err(toError("pull failed")).Msgf("Failed to pull images for the services in the compose file %s", composeFilepath.Name())
 		}
 	}
 	compose, err = readYAML(composeFilepath.String())
@@ -120,7 +125,7 @@ func getFreshPort(kind string) (port uint64) {
 func createExtendedCompose(details map[string]string, use string) (extendedCompose viper.Viper) {
 	name := details["name"]
 	extendedCompose = *viper.New()
-	compose := parseCompose(use)
+	compose := parseAndPullCompose(use, false)
 	extendedCompose.Set("name", name) // set project name for the virtulizer
 	// create an additional service to run commands
 	extendedCompose.Set(joinKey("services", "executor", "image"), compose.GetString(joinKey("services", primaryService, "image")))
