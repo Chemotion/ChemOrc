@@ -26,11 +26,12 @@ func selectOpt(acceptedOpts []string, msg string) (result string) {
 		Items: acceptedOpts,
 	}
 	_, result, err := selection.Run()
-	if err == nil {
+	switch err {
+	case nil:
 		zlog.Debug().Msgf("Selected option: %s", result)
-	} else if err == promptui.ErrInterrupt || err == promptui.ErrEOF {
+	case promptui.ErrInterrupt, promptui.ErrEOF:
 		zboth.Fatal().Err(err).Msgf("Selection cancelled!")
-	} else {
+	default:
 		zboth.Fatal().Err(err).Msgf("Selection failed! Check log. ABORT!")
 	}
 	if result == coloredExit {
