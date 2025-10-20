@@ -89,7 +89,7 @@ services:
       - chemotion
 
   converter:
-    image: ptrxyz/chemotion:eln-2.1.1
+    image: ptrxyz/chemotion:converter-2.1.1
     restart: unless-stopped
     environment:
       - SECRET_KEY=imsupersecretandwanttobechanged
