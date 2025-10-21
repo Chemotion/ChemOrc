@@ -68,7 +68,7 @@ const (
 // configuration and logging
 var (
 	// version number, here to allow override
-	versionCLI = "0.2.22"
+	versionCLI = "0.2.23"
 	// current shell
 	shell string
 	// currently selected instance
@@ -143,14 +143,15 @@ var rootCmd = &cobra.Command{
 				}
 			}
 			status := instanceStatus(currentInstance)
-			if status == "Up" {
+			switch status {
+			case "Up":
 				acceptedOpts = []string{"off", "restart"}
 				rootCmdTable["off"] = offRootCmd.Run
 				rootCmdTable["restart"] = restartRootCmd.Run
-			} else if status == "Exited" || status == "Created" {
+			case "Exited", "Created":
 				acceptedOpts = []string{"on"}
 				rootCmdTable["on"] = onRootCmd.Run
-			} else {
+			default:
 				acceptedOpts = []string{"on", "off", "restart"}
 				rootCmdTable["on"] = onRootCmd.Run
 				rootCmdTable["off"] = offRootCmd.Run

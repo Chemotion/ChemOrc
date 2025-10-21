@@ -5,6 +5,10 @@ on:
     tags:
       - "*"
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   build-release-binary:
     runs-on: ubuntu-latest

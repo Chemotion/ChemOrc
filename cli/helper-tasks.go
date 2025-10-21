@@ -31,7 +31,7 @@ func applyPatch(patchName string) (success bool) {
 				gotoFolder(givenName)
 				var result []byte
 				var err error
-				compose := parseCompose(chemotionComposeFilename)
+				compose := parseAndPullCompose(chemotionComposeFilename, false)
 				if compose.IsSet("services.ketchersvc.image") {
 					eln_image := compose.GetString("services.eln.image")
 					ketcher_image := compose.GetString("services.ketchersvc.image")

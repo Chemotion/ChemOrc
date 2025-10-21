@@ -27,20 +27,6 @@ func upgradeRequired() (toUpgrade []string) {
 	return
 }
 
-func pullImages(use string) {
-	tempCompose := parseCompose(use)
-	services := getSubHeadings(&tempCompose, "services")
-	if len(services) == 0 {
-		zboth.Warn().Err(toError("no services found")).Msgf("Please check that %s is a valid compose file with named services.", tempCompose.ConfigFileUsed())
-	}
-	for _, service := range services {
-		zboth.Info().Msgf("Pulling image for the service called %s", service)
-		if success := callVirtualizer(toSprintf("pull %s", tempCompose.GetString(joinKey("services", service, "image")))); !success {
-			zboth.Warn().Err(toError("pull failed")).Msgf("Failed to pull image for the service called %s", service)
-		}
-	}
-}
-
 func instanceUpgrade(givenName, use string) {
 	var success bool = true
 	var newComposeFile pathlib.Path
@@ -57,14 +43,14 @@ func instanceUpgrade(givenName, use string) {
 		newComposeFile = downloadFile(use, workDir.Join(toSprintf("%s.%s", getNewUniqueID(), chemotionComposeFilename)).String())
 	}
 	// get name of new image, and do a kind-of sanity check on the proposed file
-	newCompose := parseCompose(newComposeFile.String())
+	newCompose := parseAndPullCompose(newComposeFile.String(), false)
 	newImage := newCompose.GetString(joinKey("services", primaryService, "image"))
 	if newImage == "" {
 		zboth.Fatal().Err(toError("not understood compose file")).Msgf("Failed to identify %s image in the compose file.", primaryService)
 	}
 	// get port from old compose
 	oldComposeFile := workDir.Join(instancesWord, name, chemotionComposeFilename)
-	oldCompose := parseCompose(oldComposeFile.String())
+	oldCompose := parseAndPullCompose(oldComposeFile.String(), false)
 	if oldCompose.IsSet(joinKey("services", primaryService, "ports")) {
 		if err := changeExposedPort(newComposeFile.String(), oldCompose.GetStringSlice(joinKey("services", primaryService, "ports"))[0][:4]); err != nil {
 			newComposeFile.Remove()
@@ -122,7 +108,7 @@ func instanceUpgrade(givenName, use string) {
 				if _, success, _ = gotoFolder(givenName), callVirtualizer("pull mikefarah/yq"), gotoFolder("work.dir"); success {
 					var result []byte
 					gotoFolder(givenName)
-					extendedCompose := parseCompose(cliComposeFilename)
+					extendedCompose := parseAndPullCompose(cliComposeFilename, false)
 					if extendedCompose.IsSet("networks.chemotion.labels") {
 						labels := extendedCompose.GetStringMapString("networks.chemotion.labels")
 						if strings.HasPrefix(labels["net.chemotion.cli.project"], givenName) {
@@ -130,7 +116,7 @@ func instanceUpgrade(givenName, use string) {
 								yamlFile := pathlib.NewPath(cliComposeFilename)
 								err = yamlFile.WriteFile(result)
 								if err == nil {
-									extendedCompose = parseCompose(cliComposeFilename)
+									extendedCompose = parseAndPullCompose(cliComposeFilename, false)
 								}
 							}
 						}
@@ -139,7 +125,7 @@ func instanceUpgrade(givenName, use string) {
 					if extendedCompose.IsSet(joinKey("networks", "chemotion")) {
 						// reset labels on services and volumes for future identification
 						sections := []string{"services", "volumes"}
-						compose := parseCompose(chemotionComposeFilename)
+						compose := parseAndPullCompose(chemotionComposeFilename, false)
 						for _, section := range sections {
 							subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services and volumes
 							for _, k := range subheadings {
@@ -201,7 +187,7 @@ var upgradeInstanceRootCmd = &cobra.Command{
 			}
 		}
 		if pull {
-			pullImages(use)
+			parseAndPullCompose(use, true)
 		}
 		if backup {
 			instanceBackup(currentInstance, "both")

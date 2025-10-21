@@ -32,7 +32,7 @@ func selfUpdate(version string) {
 	}
 	conf.Set(joinKey(stateWord, "version"), version)
 	if existingFile(conf.ConfigFileUsed()) {
-		latestCompose := parseCompose(composeURL)
+		latestCompose := parseAndPullCompose(composeURL, false)
 		_, latestVersion, _ := strings.Cut(latestCompose.GetString(joinKey("services", primaryService, "image")), "-")
 		conf.Set(joinKey(stateWord, "latest_eln"), latestVersion)
 		if err := writeConfig(false); err != nil {
@@ -76,7 +76,7 @@ func updateRequired(check bool) (required bool) {
 		required = newVer.GreaterThan(existingVer)
 		conf.Set(timeKey, time.Now())
 		if required {
-			latestCompose := parseCompose(composeURL)
+			latestCompose := parseAndPullCompose(composeURL, false)
 			_, latestVersion, _ := strings.Cut(latestCompose.GetString(joinKey("services", primaryService, "image")), "-")
 			conf.Set(joinKey(stateWord, "latest_eln"), latestVersion)
 		}

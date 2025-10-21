@@ -15,9 +15,9 @@ import (
 // helper to determine the required compose file
 func getComposeAddressToUse(currentVersion, action string) (use string) {
 	versions := make(map[string]string)
-	latestForThisCLIRelease := "2.0.1"
+	latestForThisCLIRelease := "2.1.1"
 	orderVersions := []string{latestForThisCLIRelease, "1.10.5", "1.9.3"} // descending order
-	versions[latestForThisCLIRelease] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/47507b7348b6ab6850036b2e334f586aba03fea3/payload/docker-compose.yml"
+	versions[latestForThisCLIRelease] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/8b8765e1279b9b4fbd2748245a3819abd67bae93/payload/docker-compose.yml"
 	versions["1.10.5"] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/3a9339fe7156da32d786975482aa97c993a997b9/payload/docker-compose.yml"
 	versions["1.9.3"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/b7ad83fba1e1db6c5525a11b06bf7eed59a769f6/payload/docker-compose.yml"
 	validVersions := []string{}
@@ -54,7 +54,7 @@ func getComposeAddressToUse(currentVersion, action string) (use string) {
 }
 
 // helper to get a compose file
-func parseCompose(use string) (compose viper.Viper) {
+func parseAndPullCompose(use string, pull bool) (compose viper.Viper) {
 	var (
 		composeFilepath pathlib.Path
 		isUrl           bool
@@ -70,6 +70,11 @@ func parseCompose(use string) (compose viper.Viper) {
 			zboth.Fatal().Err(err).Msgf("Failed to download the file from URL: %s.", use)
 		} else {
 			zboth.Fatal().Err(err).Msgf("Failed: %s file not found.", use)
+		}
+	}
+	if pull {
+		if success := callVirtualizer(toSprintf("compose -f %s pull", composeFilepath.String())); !success {
+			zboth.Warn().Err(toError("pull failed")).Msgf("Failed to pull images for the services in the compose file %s", composeFilepath.Name())
 		}
 	}
 	compose, err = readYAML(composeFilepath.String())
@@ -120,7 +125,7 @@ func getFreshPort(kind string) (port uint64) {
 func createExtendedCompose(details map[string]string, use string) (extendedCompose viper.Viper) {
 	name := details["name"]
 	extendedCompose = *viper.New()
-	compose := parseCompose(use)
+	compose := parseAndPullCompose(use, false)
 	extendedCompose.Set("name", name) // set project name for the virtulizer
 	// create an additional service to run commands
 	extendedCompose.Set(joinKey("services", "executor", "image"), compose.GetString(joinKey("services", primaryService, "image")))
