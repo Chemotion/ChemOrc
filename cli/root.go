@@ -123,7 +123,7 @@ var rootCmd = &cobra.Command{
 				zboth.Fatal().Err(err).Msg(err.Error())
 			}
 		}
-		if updateRequired(false) {
+		if autoCheckUpdate() {
 			zboth.Info().Msg(color.Color(toSprintf("[yellow][bold]There is a new version of %s available.", nameCLI)))
 		}
 		if toUpgrade := upgradeRequired(); len(toUpgrade) > 0 {

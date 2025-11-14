@@ -18,7 +18,7 @@ func isInteractive(fail bool) (interactive bool) {
 			zboth.Fatal().Err(toError("inside container in interactive mode")).Msgf("%s is not meant to executed interactively from within a container. Please provide all commands and flags. ABORT!", nameCLI)
 		}
 	}
-	if conf.GetBool(joinKey(stateWord, "quiet")) {
+	if conf.GetBool(joinKey(stateWord, "quiet")) { // if the key does not exist, this returns false which implies that the value of `interactive` remains unchanged
 		if interactive = false; fail {
 			zboth.Fatal().Err(toError("incomplete in quiet mode")).Msgf("%s is in quiet mode. Give all arguments to specify the desired action; use '--help' flag for more. ABORT!", nameCLI)
 		}
