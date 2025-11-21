@@ -73,8 +73,6 @@ var (
 	shell string
 	// currently selected instance
 	currentInstance string
-	// switches to true when this file is found in root of a computer
-	isInContainer bool = existingFile("/.version")
 	// stores the configuration of the CLI
 	conf viper.Viper = *viper.New()
 	// off-screen logger, initialized in initLog()
@@ -115,7 +113,7 @@ var rootCmd = &cobra.Command{
 			logwhere()
 		}
 		confirmVirtualizer(minimumVirtualizer)
-		zboth.Info().Msgf("Welcome to %s! You are on a host machine.", nameCLI)
+		zboth.Info().Msgf("Welcome to %s!", nameCLI)
 		if currentInstance != "" {
 			if err := instanceValidate(currentInstance); err == nil {
 				zboth.Info().Msgf("The instance you are currently managing is %s.", color.Color(toSprintf("[green]%s", currentInstance)))
