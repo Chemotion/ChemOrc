@@ -97,6 +97,9 @@ func getInternalName(givenName string) (name string) {
 	if err := instanceValidate(givenName); err == nil {
 		name = conf.GetString(joinKey(instancesWord, givenName, "name"))
 	} else {
+		if len(allInstances()) == 0 {
+			zboth.Fatal().Err(err).Msgf("No installed instance of %s found.", nameProject)
+		}
 		zboth.Fatal().Err(err).Msgf("No such instance: %s", givenName)
 	}
 	return
