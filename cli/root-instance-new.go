@@ -88,7 +88,7 @@ func parseAndPullCompose(use string, pull bool) (compose viper.Viper) {
 }
 
 // helper to get a fresh (unassigned port)
-func getFreshPort(kind string) (port uint64) {
+func getFreshPort() (port uint64) {
 	existingPorts := allPorts()
 	var firstPort uint64
 	if assigned := conf.GetInt(joinKey(stateWord, "first_port")); assigned == 0 {
@@ -100,22 +100,14 @@ func getFreshPort(kind string) (port uint64) {
 	if len(existingPorts) == 0 {
 		port = firstPort
 	} else {
-		if kind == "Production" {
-			for i := firstPort + 101; i <= maxInstancesOfKind+(firstPort+101); i++ {
-				if elementInSlice(i, &existingPorts) == -1 {
-					port = i
-					break
-				}
-			}
-		} else if kind == "Development" {
-			for i := firstPort + 201; i <= maxInstancesOfKind+(firstPort+201); i++ {
-				if elementInSlice(i, &existingPorts) == -1 {
-					port = i
-					break
-				}
+		for i := firstPort + 101; i <= maxInstancesOfKind+(firstPort+101); i++ {
+			if elementInSlice(i, &existingPorts) == -1 {
+				port = i
+				break
 			}
 		}
-		if port == (firstPort+101)+maxInstancesOfKind || port == (firstPort+201)+maxInstancesOfKind {
+
+		if port == (firstPort+101)+maxInstancesOfKind {
 			zboth.Fatal().Err(toError("max instances")).Msgf("A maximum of %d instances of %s are allowed. Please contact us if you hit this limit.", maxInstancesOfKind, nameProject)
 		}
 	}
@@ -165,11 +157,11 @@ func createExtendedCompose(details map[string]string, use string) (extendedCompo
 	return
 }
 
-func instanceCreateProduction(details map[string]string) (success bool) {
+func instanceCreate(details map[string]string) (success bool) {
 	pro, add, port := splitAddress(details["accessAddress"])
 	details["protocol"], details["address"] = pro, add
 	if port == 0 {
-		port = getFreshPort(details["kind"])
+		port = getFreshPort()
 		if details["address"] == "localhost" {
 			details["accessAddress"] += toSprintf(":%d", port)
 		}
@@ -204,7 +196,8 @@ func instanceCreateProduction(details map[string]string) (success bool) {
 	extendedCompose := createExtendedCompose(details, composeFile.String())
 	// store values in the conf, the conf file is modified only later
 	conf.Set(joinKey(instancesWord, details["givenName"], "port"), port)
-	for _, key := range []string{"name", "kind", "accessAddress"} {
+	conf.Set(joinKey(instancesWord, details["givenName"], "kind"), "production") // because we do not want to change the format of chem_cli.yml file
+	for _, key := range []string{"name", "accessAddress"} {
 		conf.Set(joinKey(instancesWord, details["givenName"], key), details[key])
 	}
 	// make folder and move the compose file into it
@@ -240,12 +233,14 @@ func instanceCreateProduction(details map[string]string) (success bool) {
 
 // interaction when creating a new instance
 func processInstanceCreateCmd(cmd *cobra.Command, details map[string]string) (create bool) {
-	askName, askAddress, askDevelopment, askUse := true, true, false, true
+	askName, askAddress, askUse := true, true, true
 	create = true
 	details["accessAddress"] = addressDefault
-	details["kind"] = "Production"
 	details["use"] = composeURL
 	if ownCall(cmd) {
+		if cmd.Flag("development").Changed {
+			zboth.Fatal().Err(toError("deprecated flag")).Msgf("This flag is now deprecated. Please use the devcontainer functionality from Chemotion ELN repository to work with development instance.")
+		}
 		if cmd.Flag("name").Changed {
 			details["givenName"] = cmd.Flag("name").Value.String()
 			if err := newInstanceValidate(details["givenName"]); err != nil {
@@ -268,13 +263,6 @@ func processInstanceCreateCmd(cmd *cobra.Command, details map[string]string) (cr
 			details["use"] = cmd.Flag("use").Value.String()
 			askUse = false
 		}
-		if cmd.Flag("development") == nil {
-			askDevelopment = false
-		} else if toBool(cmd.Flag("development").Value.String()) {
-			details["kind"] = "Development"
-		} else {
-			askDevelopment = true
-		}
 	}
 	if isInteractive(false) {
 		if !ownCall(cmd) { // don't ask if the command is run directly i.e. without the menu
@@ -290,13 +278,8 @@ func processInstanceCreateCmd(cmd *cobra.Command, details map[string]string) (cr
 				details["use"] = getComposeAddressToUse("1.3.1", "install")
 			}
 			if askAddress {
-				if selectYesNo("Is this instance having its own web-address (e.g. https://chemotion.uni.de or http://chemotion.uni.de:4100)?", false) {
-					details["accessAddress"] = getString("Please enter the web-address", addressValidate)
-				}
-			}
-			if askDevelopment {
-				if !selectYesNo("Do you want a Production instance", true) {
-					details["kind"] = "Development"
+				if selectYesNo("Will this instance have its own web-address?", true) {
+					details["accessAddress"] = getString("Please enter the web-address (e.g. https://chemotion.uni.de or http://chemotion.uni.de:4100)", addressValidate)
 				}
 			}
 		}
@@ -324,13 +307,8 @@ var newInstanceRootCmd = &cobra.Command{
 		details := make(map[string]string)
 		create := processInstanceCreateCmd(cmd, details)
 		if create {
-			switch details["kind"] {
-			case "Production":
-				if success := instanceCreateProduction(details); success {
-					zboth.Info().Msgf("Successfully created a new production instance. Once switched on, it can be found at: %s", details["accessAddress"])
-				}
-			case "Development":
-				zboth.Fatal().Err(toError("not implemented")).Msgf("This feature - deployment of development instances of chemotion using ChemCLI - is currently under development.")
+			if success := instanceCreate(details); success {
+				zboth.Info().Msgf("Successfully created a new instance. Once switched on, it can be found at: %s", details["accessAddress"])
 			}
 		}
 	},
@@ -341,5 +319,5 @@ func init() {
 	newInstanceRootCmd.Flags().StringP("name", "n", "must.be.given", "Name for the new instance")
 	newInstanceRootCmd.Flags().String("use", composeURL, "URL or filepath of the compose file to use for creating the instance")
 	newInstanceRootCmd.Flags().String("address", addressDefault, "Web-address (or hostname) for accessing the instance")
-	newInstanceRootCmd.Flags().Bool("development", false, "Create a development instance")
+	newInstanceRootCmd.Flags().Bool("development", false, "NOW DEPRECATED Create a development instance")
 }
