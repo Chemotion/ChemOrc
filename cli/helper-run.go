@@ -13,13 +13,9 @@ import (
 // check if the CLI is running interactively; if interactive == true && fail == true, then exit. Wrapper around conf.GetBool(joinKey(stateWord,"quiet")).
 func isInteractive(fail bool) (interactive bool) {
 	interactive = true
-	if isInContainer {
-		if interactive = false; fail {
-			zboth.Fatal().Err(toError("inside container in interactive mode")).Msgf("%s is not meant to executed interactively from within a container. Please provide all commands and flags. ABORT!", nameCLI)
-		}
-	}
 	if conf.GetBool(joinKey(stateWord, "quiet")) { // if the key does not exist, this returns false which implies that the value of `interactive` remains unchanged
-		if interactive = false; fail {
+		interactive = false
+		if fail {
 			zboth.Fatal().Err(toError("incomplete in quiet mode")).Msgf("%s is in quiet mode. Give all arguments to specify the desired action; use '--help' flag for more. ABORT!", nameCLI)
 		}
 	}
