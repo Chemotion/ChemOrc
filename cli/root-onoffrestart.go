@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"fmt"
+	"strings"
 	"time"
 
 	"github.com/schollz/progressbar/v3"
@@ -9,7 +9,7 @@ import (
 )
 
 // show (and then remove) a progress bar that waits for an instance to start
-func waitStartSpinner(seconds int, givenName string) (waitTime int) {
+func waitStartSpinner(waitForSeconds int, givenName string) (waitTime int) {
 	bar := progressbar.NewOptions(
 		-1,
 		progressbar.OptionSetDescription(toSprintf("Starting %s...", givenName)),
@@ -19,20 +19,29 @@ func waitStartSpinner(seconds int, givenName string) (waitTime int) {
 		progressbar.OptionSetVisibility(true),
 		progressbar.OptionSpinnerType(51),
 	)
-	for i := 0; i < seconds; i++ {
-		if instancePing(givenName) == "200 OK" {
+	startTime := time.Now()
+	for {
+		time.Sleep(1 * time.Second)
+		response := instancePing(givenName)
+		timeSince := int(time.Since(startTime).Seconds())
+		if response == "200 OK" {
+			waitTime = timeSince
 			bar.Finish()
-			fmt.Println()
-			waitTime = i
 			return
 		}
-		bar.Add(1)
-		time.Sleep(1 * time.Second)
+		if strings.Contains(response, "x509") {
+			waitTime = -1
+			bar.Finish()
+			zboth.Warn().Err(toError(response)).Msgf("Ping failed because: `certificate signed by unknown authority`.")
+			return
+		}
+		bar.Add(timeSince)
+		if timeSince >= waitForSeconds {
+			waitTime = -1
+			bar.Finish()
+			return
+		}
 	}
-	bar.Finish()
-	waitTime = -1
-	fmt.Println()
-	return
 }
 
 func instanceStart(givenName string) {
@@ -46,9 +55,9 @@ func instanceStart(givenName string) {
 		if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+"up -d"), gotoFolder("work.dir"); success {
 			waitFor := 120 // in seconds
 			if status == "Exited" {
-				waitFor = 30
+				waitFor = 60 // in seconds
 			}
-			zboth.Info().Msgf("Starting instance called %s.", givenName) // because user sees the spinner
+			zboth.Info().Msgf("Pinging instance called %s.", givenName) // because user sees the spinner
 			waitTime := waitStartSpinner(waitFor, givenName)
 			if waitTime >= 0 {
 				var timeTaken string
@@ -57,7 +66,7 @@ func instanceStart(givenName string) {
 				}
 				zboth.Info().Msgf("Successfully started instance called %s%s at %s.", givenName, timeTaken, conf.GetString(joinKey(instancesWord, givenName, "accessAddress")))
 			} else {
-				zboth.Fatal().Err(toError("ping timeout after %d seconds", waitTime)).Msgf("Failed to start instance called %s. Please check logs using `%s instance %s`.", givenName, commandForCLI, logInstanceRootCmd.Use)
+				zboth.Fatal().Err(toError("ping timeout after %d seconds", waitTime)).Msgf("Failed to ping the instance called %s. Try accessing it yourself. Also, please check logs using `%s instance %s`.", givenName, commandForCLI, logInstanceRootCmd.Use)
 			}
 		} else {
 			zboth.Fatal().Msgf("Failed to start instance called %s.", givenName)
