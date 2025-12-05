@@ -6,11 +6,11 @@ require (
 	github.com/cavaliergopher/grab/v3 v3.0.1
 	github.com/chigopher/pathlib v1.0.0
 	github.com/google/uuid v1.6.0
-	github.com/hashicorp/go-version v1.7.0
+	github.com/hashicorp/go-version v1.8.0
 	github.com/manifoldco/promptui v0.9.0
 	github.com/rs/zerolog v1.34.0
-	github.com/shirou/gopsutil/v4 v4.25.10
-	github.com/spf13/cobra v1.10.1
+	github.com/shirou/gopsutil/v4 v4.25.11
+	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 )
 
