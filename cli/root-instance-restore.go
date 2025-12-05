@@ -24,7 +24,7 @@ var restoreInstanceRootCmd = &cobra.Command{
 		details := make(map[string]string)
 		if create := processInstanceCreateCmd(cmd, details); create {
 			var success bool
-			if success = instanceCreateProduction(details); success {
+			if success = instanceCreate(details); success {
 				zboth.Info().Msgf("Successfully created a new production instance. Now restoring the backup into it")
 				if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(toSprintf("cp %s %s-%s-%d:/backup/backup.data.tar.gz", data, details["name"], primaryService, rollNum)), gotoFolder("work.dir"); success {
 					if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(toSprintf("cp %s %s-%s-%d:/backup/backup.sql.gz", db, details["name"], primaryService, rollNum)), gotoFolder("work.dir"); success {

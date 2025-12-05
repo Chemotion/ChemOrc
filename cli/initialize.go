@@ -114,7 +114,7 @@ func initConf() {
 			zboth.Fatal().Err(err).Msgf("Failed to read configuration file: %s. ABORT!", conf.ConfigFileUsed())
 		}
 	}
-	zboth.Debug().Msgf("End: initialize configuration; Config found?: %t; is inside container?: %t", configFileFound, isInContainer)
+	zboth.Debug().Msgf("End: initialize configuration; Config found?: %t", configFileFound)
 }
 
 // bind the command line flags to the configuration

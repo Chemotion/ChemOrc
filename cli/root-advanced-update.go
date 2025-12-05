@@ -52,37 +52,30 @@ func getLatestVersion() (version string) {
 	}
 }
 
-// check if an update is required; store time of check in the config file if it exists
-func updateRequired(check bool) (required bool) {
+// checks automatically if an update is required; store time of check in the config file if it exists
+func autoCheckUpdate() (required bool) {
 	verKey, timeKey := joinKey(stateWord, "version"), joinKey(stateWord, "version_checked_on")
-	if !check {
-		if conf.IsSet(verKey) {
-			if versionCLI != conf.GetString(verKey) {
-				zboth.Warn().Msgf("%s version wrong in %s, be sure of what you are doing!", nameCLI, conf.ConfigFileUsed())
-			}
-			checkedOn := conf.GetTime(timeKey)
-			if checkedOn.IsZero() { // in case this not set
-				check = true
-			} else {
-				if time.Since(checkedOn).Hours() > 24 { // check every 24 hours
-					check = true
-				}
-			}
+	lastCheckedOn := conf.GetTime(timeKey) // can be 0 if the key was never set
+	if conf.IsSet(verKey) {                // i.e. chemCLI is installed
+		if versionCLI != conf.GetString(verKey) {
+			zboth.Warn().Msgf("%s version wrong in %s, be sure of what you are doing!", nameCLI, conf.ConfigFileUsed())
+		}
+		if !lastCheckedOn.IsZero() && time.Since(lastCheckedOn) < 0 { // time.Since being negative implies disable-autocheck was done
+			return false
 		}
 	}
-	if check {
-		existingVer, _ := vercompare.NewVersion(versionCLI)
-		newVer, _ := vercompare.NewVersion(getLatestVersion())
-		required = newVer.GreaterThan(existingVer)
-		conf.Set(timeKey, time.Now())
-		if required {
+	existingVer, _ := vercompare.NewVersion(versionCLI)
+	newVer, _ := vercompare.NewVersion(getLatestVersion())
+	required = newVer.GreaterThan(existingVer)
+	conf.Set(timeKey, time.Now())
+	zboth.Debug().Msgf("The lastest version of ChemCLI is %s while this current version is %s.", newVer.String(), versionCLI)
+	if existingFile(conf.ConfigFileUsed()) {
+		if required && time.Since(lastCheckedOn).Hours() > 24 { // even though new CLI version is always checked (via GH API), a new version of ELN is determined (via downloading d-c.yml file) only once every 24 hours
 			latestCompose := parseAndPullCompose(composeURL, false)
 			_, latestVersion, _ := strings.Cut(latestCompose.GetString(joinKey("services", primaryService, "image")), "-")
 			conf.Set(joinKey(stateWord, "latest_eln"), latestVersion)
 		}
-		if existingFile(conf.ConfigFileUsed()) {
-			writeConfig(false)
-		}
+		writeConfig(false) // always write as long as the file exists
 	}
 	return
 }
@@ -91,11 +84,13 @@ var updateSelfAdvancedRootCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update " + nameCLI + " itself",
 	Run: func(cmd *cobra.Command, _ []string) {
+		if ownCall(cmd) && toBool(cmd.Flag("force").Value.String()) {
+			zboth.Info().Err(toError("deprecated flag")).Msgf("This flag is now deprecated. The same functionality can be achieved using: ./%s advanced update --quiet", nameCLI)
+		}
 		if ownCall(cmd) && toBool(cmd.Flag("disable-autocheck").Value.String()) {
 			if existingFile(conf.ConfigFileUsed()) {
 				conf.Set(joinKey(stateWord, "version_checked_on"), time.Now().Add(time.Duration(876576)*time.Hour))
 				writeConfig(false)
-
 			} else {
 				if currentInstance == "" {
 					zboth.Info().Err(toError("no config file")).Msgf("This flag stores the settings in config file which is created only on installation. Please re-run the command after installation.")
@@ -103,21 +98,22 @@ var updateSelfAdvancedRootCmd = &cobra.Command{
 					zboth.Fatal().Err(toError("config file missing")).Msgf("Could not find config file %s", conf.ConfigFileUsed())
 				}
 			}
-		} else {
-			if selectYesNo("This process establishes contact with GitHub and gets data from them. Continue?", true) && (updateRequired(true) || (ownCall(cmd) && toBool(cmd.Flag("force").Value.String()))) {
-				latestVersion := getLatestVersion()
-				if selectYesNo(toSprintf("Update %s from version %s to version %s", nameCLI, versionCLI, latestVersion), true) {
-					selfUpdate(latestVersion)
-				}
-			} else {
-				zboth.Info().Msgf("You are on the latest version of %s.", nameCLI)
-			}
+			return // exit after disabling autocheck
+		}
+		latestVersion := getLatestVersion()
+		question := toSprintf("Update %s from version %s to version %s", nameCLI, versionCLI, latestVersion)
+		if versionCLI == latestVersion {
+			question = toSprintf("%s is already up to date. Overwite existing executable?", nameCLI)
+		}
+		if !isInteractive(false) || selectYesNo(question, true) {
+			// i.e. it was run non-interactively and therefore run the upgrade without any further questions asked else ask whether user wants to replace/overwrite or not.
+			selfUpdate(latestVersion)
 		}
 	},
 }
 
 func init() {
 	advancedRootCmd.AddCommand(updateSelfAdvancedRootCmd)
-	updateSelfAdvancedRootCmd.Flags().Bool("force", false, toSprintf("Force update the %s.", nameCLI))
-	updateSelfAdvancedRootCmd.Flags().Bool("disable-autocheck", false, toSprintf("Disable auto-check for latest version of %s.", nameCLI))
+	updateSelfAdvancedRootCmd.Flags().Bool("force", false, toSprintf("NOW DEPRECATED Force update the %s.", nameCLI))
+	updateSelfAdvancedRootCmd.Flags().Bool("disable-autocheck", false, toSprintf("Disable auto-check of latest version for %s.", nameCLI))
 }

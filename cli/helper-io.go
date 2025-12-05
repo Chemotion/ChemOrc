@@ -13,18 +13,10 @@ import (
 
 // debug level logging of where we are running at the moment
 func logwhere() {
-	if isInContainer {
-		if currentInstance == "" {
-			zboth.Debug().Msgf("Running inside an unknown container") // TODO: read .version file or get from environment
-		} else {
-			zboth.Debug().Msgf("Running inside `%s`", currentInstance)
-		}
+	if currentInstance == "" {
+		zboth.Debug().Msgf("Running; no instance selected yet")
 	} else {
-		if currentInstance == "" {
-			zboth.Debug().Msgf("Running on host machine; no instance selected yet")
-		} else {
-			zboth.Debug().Msgf("Running on host machine; selected instance: %s", currentInstance)
-		}
+		zboth.Debug().Msgf("Running; selected instance: %s", currentInstance)
 	}
 	zboth.Debug().Msgf("Called as: %s", strings.Join(os.Args, " "))
 }

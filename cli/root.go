@@ -68,13 +68,11 @@ const (
 // configuration and logging
 var (
 	// version number, here to allow override
-	versionCLI = "0.2.23"
+	versionCLI = "0.2.24"
 	// current shell
 	shell string
 	// currently selected instance
 	currentInstance string
-	// switches to true when this file is found in root of a computer
-	isInContainer bool = existingFile("/.version")
 	// stores the configuration of the CLI
 	conf viper.Viper = *viper.New()
 	// off-screen logger, initialized in initLog()
@@ -115,7 +113,7 @@ var rootCmd = &cobra.Command{
 			logwhere()
 		}
 		confirmVirtualizer(minimumVirtualizer)
-		zboth.Info().Msgf("Welcome to %s! You are on a host machine.", nameCLI)
+		zboth.Info().Msgf("Welcome to %s!", nameCLI)
 		if currentInstance != "" {
 			if err := instanceValidate(currentInstance); err == nil {
 				zboth.Info().Msgf("The instance you are currently managing is %s.", color.Color(toSprintf("[green]%s", currentInstance)))
@@ -123,7 +121,7 @@ var rootCmd = &cobra.Command{
 				zboth.Fatal().Err(err).Msg(err.Error())
 			}
 		}
-		if updateRequired(false) {
+		if autoCheckUpdate() {
 			zboth.Info().Msg(color.Color(toSprintf("[yellow][bold]There is a new version of %s available.", nameCLI)))
 		}
 		if toUpgrade := upgradeRequired(); len(toUpgrade) > 0 {

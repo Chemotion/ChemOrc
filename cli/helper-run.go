@@ -13,13 +13,9 @@ import (
 // check if the CLI is running interactively; if interactive == true && fail == true, then exit. Wrapper around conf.GetBool(joinKey(stateWord,"quiet")).
 func isInteractive(fail bool) (interactive bool) {
 	interactive = true
-	if isInContainer {
-		if interactive = false; fail {
-			zboth.Fatal().Err(toError("inside container in interactive mode")).Msgf("%s is not meant to executed interactively from within a container. Please provide all commands and flags. ABORT!", nameCLI)
-		}
-	}
-	if conf.GetBool(joinKey(stateWord, "quiet")) {
-		if interactive = false; fail {
+	if conf.GetBool(joinKey(stateWord, "quiet")) { // if the key does not exist, this returns false which implies that the value of `interactive` remains unchanged
+		interactive = false
+		if fail {
 			zboth.Fatal().Err(toError("incomplete in quiet mode")).Msgf("%s is in quiet mode. Give all arguments to specify the desired action; use '--help' flag for more. ABORT!", nameCLI)
 		}
 	}
@@ -101,6 +97,9 @@ func getInternalName(givenName string) (name string) {
 	if err := instanceValidate(givenName); err == nil {
 		name = conf.GetString(joinKey(instancesWord, givenName, "name"))
 	} else {
+		if len(allInstances()) == 0 {
+			zboth.Fatal().Err(err).Msgf("No installed instance of %s found.", nameProject)
+		}
 		zboth.Fatal().Err(err).Msgf("No such instance: %s", givenName)
 	}
 	return
