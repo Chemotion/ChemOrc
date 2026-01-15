@@ -28,7 +28,6 @@ var instanceRootCmd = &cobra.Command{
 		allIns := allInstances()
 		numIns := len(allIns)
 		if numIns > 0 {
-			instanceCmdTable["switch"] = switchInstanceRootCmd.Run
 			if elementInSlice(instanceStatus(currentInstance), &[]string{"Exited", "Created"}) == -1 { // checks if the instance is running
 				acceptedOpts = append(acceptedOpts, []string{"ping", "stats", "logs", "users", "consoles"}...)
 				instanceCmdTable["ping"] = pingInstanceRootCmd.Run
@@ -48,7 +47,8 @@ var instanceRootCmd = &cobra.Command{
 			instanceCmdTable["backup"] = backupInstanceRootCmd.Run
 			instanceCmdTable["upgrade"] = upgradeInstanceRootCmd.Run
 			if numIns > 1 {
-				acceptedOpts = append(acceptedOpts, "list")
+				acceptedOpts = append(acceptedOpts, "switch", "list")
+				instanceCmdTable["switch"] = switchInstanceRootCmd.Run
 				instanceCmdTable["list"] = listInstanceRootCmd.Run
 			}
 			acceptedOpts = append(acceptedOpts, []string{"new", "restore"}...)

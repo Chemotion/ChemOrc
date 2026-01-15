@@ -15,11 +15,11 @@ import (
 // helper to determine the required compose file
 func getComposeAddressToUse(currentVersion, action string) (use string) {
 	versions := make(map[string]string)
-	latestForThisCLIRelease := "2.1.1"
-	orderVersions := []string{latestForThisCLIRelease, "1.10.5", "1.9.3"} // descending order
-	versions[latestForThisCLIRelease] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/8b8765e1279b9b4fbd2748245a3819abd67bae93/payload/docker-compose.yml"
+	latestForThisCLIRelease := "2.2.0"
+	orderVersions := []string{latestForThisCLIRelease, "2.1.1", "1.10.5"} // descending order
+	versions[latestForThisCLIRelease] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/ece196c567e6505afee853f4acf7baedfdd0770e/payload/docker-compose.yml"
+	versions["2.1.1"] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/8b8765e1279b9b4fbd2748245a3819abd67bae93/payload/docker-compose.yml"
 	versions["1.10.5"] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/3a9339fe7156da32d786975482aa97c993a997b9/payload/docker-compose.yml"
-	versions["1.9.3"] = "https://raw.githubusercontent.com/Chemotion/ChemCLI/b7ad83fba1e1db6c5525a11b06bf7eed59a769f6/payload/docker-compose.yml"
 	validVersions := []string{}
 	for _, version := range orderVersions {
 		now, _ := vercompare.NewVersion(currentVersion)
