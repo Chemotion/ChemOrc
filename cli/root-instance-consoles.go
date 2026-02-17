@@ -36,9 +36,10 @@ var consoleInstanceRootCmd = &cobra.Command{
 	ValidArgs: []string{"shell", "railsc", "psql"},
 	Run: func(cmd *cobra.Command, args []string) {
 		var selected string
-		if ownCall(cmd) {
-			if selected = "multiple arguments"; len(args) == 1 {
-				selected = args[0]
+		if ownCall(cmd) && len(args) > 0 {
+			selected = args[0]
+			if elementInSlice(selected, &cmd.ValidArgs) == -1 {
+				zboth.Fatal().Err(toError("invalid argument")).Msgf("console expects one of the following: %s.", strings.Join(cmd.ValidArgs, ", "))
 			}
 		} else {
 			if isInteractive(true) {

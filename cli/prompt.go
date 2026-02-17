@@ -191,6 +191,7 @@ func getPassword() (password string) {
 		Label:       "Please enter new password",
 		Mask:        '*',
 		HideEntered: true,
+		Validate:    textValidate,
 	}
 	var confirm string
 	var err error
