@@ -136,6 +136,7 @@ var userInstanceRootCmd = &cobra.Command{
 		}
 		acceptedOpts := []string{"list", "unlock", "create", "update", "describe", "delete"}
 		selected, firstname, lastname, email, password, abbreviation, typeOfUser := "", "", "", "", "", "", "Person"
+		passwordFlagUsed, passwordFlagAssigned := false, false
 		if ownCall(cmd) {
 			if len(args) > 0 {
 				selected = args[0]
@@ -177,12 +178,18 @@ var userInstanceRootCmd = &cobra.Command{
 				}
 			}
 			if cmd.Flag("password").Changed {
+				passwordFlagUsed = true
 				switch selected {
 				case "list", "unlock", "describe", "delete":
 					zboth.Warn().Err(toError("useless flag")).Msgf("The flag --password is useless when used with `%s`", selected)
 				case "create", "update":
 					password = cmd.Flag("password").Value.String()
-					if err := textValidate(firstname); err != nil {
+					if password == "<random string>" {
+						password = getNewUniqueID() + getNewUniqueID()
+					} else {
+						passwordFlagAssigned = true
+					}
+					if err := textValidate(password); err != nil {
 						zboth.Fatal().Err(err).Msgf("password is invalid")
 					}
 				}
@@ -242,12 +249,13 @@ var userInstanceRootCmd = &cobra.Command{
 			if abbreviation == "" && isInteractive(true) {
 				abbreviation = getString("Please enter abbreviation name for the user", textValidate)
 			}
-			if password == "" {
-				if isInteractive(false) {
-					password = getPassword()
-				} else {
-					password = getNewUniqueID() + getNewUniqueID()
+			if passwordFlagUsed {
+				if !passwordFlagAssigned {
 					fmt.Printf("Setting password as for %s. Please take note - this will not be stored in logs. Password is:\n%s\n", email, password)
+				}
+			} else {
+				if isInteractive(true) {
+					password = getPassword()
 				}
 			}
 			createUser(currentInstance, email, firstname, lastname, typeOfUser, abbreviation, password)
@@ -268,14 +276,14 @@ var userInstanceRootCmd = &cobra.Command{
 			if email == "" && isInteractive(true) {
 				email = getString("Please enter email address of the user you wish to update", emailValidate)
 			}
-			if isInteractive(false) {
-				if firstname == "" && lastname == "" && abbreviation == "" && password == "" {
+			if !isInteractive(false) {
+				if firstname == "" && lastname == "" && abbreviation == "" && !passwordFlagUsed {
 					zboth.Fatal().Err(toError("no flag used")).Msgf("You must specify --email and at least one of these to use `update` in quiet mode: --firstname, --lastname, --abbreviation, --password.")
 				}
 			}
 			if userExists(currentInstance, email) {
 				if isInteractive(false) {
-					if firstname == "" && lastname == "" && abbreviation == "" && password == "" {
+					if firstname == "" && lastname == "" && abbreviation == "" && !passwordFlagUsed {
 						updateUserInteraction(currentInstance, email, &firstname, &lastname, &abbreviation, &password)
 					}
 				}
@@ -303,11 +311,14 @@ var userInstanceRootCmd = &cobra.Command{
 						zboth.Info().Msgf("Abbreviation changed successfully.")
 					}
 				}
-				if password != "" {
+				if passwordFlagUsed {
 					subStr := toSprintf("password:'%s'", password)
 					if err := updateUser(currentInstance, email, subStr); err != nil {
 						zboth.Fatal().Err(err).Msgf("Failed to change user's password. Please ensure that all conditions for password are met.")
 					} else {
+						if !passwordFlagAssigned {
+							fmt.Printf("Setting password as for %s. Please take note - this will not be stored in logs. Password is:\n%s\n", email, password)
+						}
 						zboth.Info().Msgf("Password changed successfully.")
 					}
 				}
@@ -340,6 +351,7 @@ func init() {
 	userInstanceRootCmd.Flags().String("firstname", "", "(updated) firstname of the new (existing) user")
 	userInstanceRootCmd.Flags().String("lastname", "", "(updated) lastname of the new (existing) user")
 	userInstanceRootCmd.Flags().String("email", "", "email address of the user to unlock/create/update/delete")
-	userInstanceRootCmd.Flags().String("password", "", "new password for the user")
+	userInstanceRootCmd.Flags().String("password", "<random string>", "new password for the user; you must use password=my_password to use this flag")
+	userInstanceRootCmd.Flags().Lookup("password").NoOptDefVal = "<random string>"
 	userInstanceRootCmd.Flags().String("abbreviation", "", "new/updated abbreviation for the user")
 }
