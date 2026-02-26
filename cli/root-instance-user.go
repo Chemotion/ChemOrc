@@ -57,17 +57,17 @@ func updateUserInteraction(givenName, email string, firstname *string, lastname 
 	details := getUserDetails(givenName, email)
 	if *firstname == "" {
 		if selectYesNo("Do you wish to change the firstname for the user (current value is: "+details["firstname"]+")", false) {
-			*firstname = getString("Please enter new value of firstname for the user", textValidate)
+			*firstname = getString("Please enter new value of firstname for the user", []string{}, textValidate)
 		}
 	}
 	if *lastname == "" {
 		if selectYesNo("Do you wish to change the lastname for the user (current value is: "+details["lastname"]+")", false) {
-			*lastname = getString("Please enter new value of lastname for the user", textValidate)
+			*lastname = getString("Please enter new value of lastname for the user", []string{}, textValidate)
 		}
 	}
 	if *abbreviation == "" {
 		if selectYesNo("Do you wish to change the abbreviation for the user (current value is: "+details["abbreviation"]+")", false) {
-			*abbreviation = getString("Please enter new value of abbreviation for the user", textValidate)
+			*abbreviation = getString("Please enter new value of abbreviation for the user", []string{}, textValidate)
 		}
 	}
 	if *password == "" {
@@ -223,7 +223,7 @@ var userInstanceRootCmd = &cobra.Command{
 			}
 		case "unlock":
 			if email == "" && isInteractive(true) {
-				email = getString("Please enter email address of the user you wish to unlock", emailValidate)
+				email = getString("Please enter email address of the user you wish to unlock", []string{}, emailValidate)
 			}
 			if userExists(currentInstance, email) {
 				unlockUser(currentInstance, email)
@@ -232,7 +232,7 @@ var userInstanceRootCmd = &cobra.Command{
 			}
 		case "create":
 			if email == "" && isInteractive(true) {
-				email = getString("Please enter email address of the user you wish to create", emailValidate)
+				email = getString("Please enter email address of the user you wish to create", []string{}, emailValidate)
 				if selectYesNo("Is this user an Admin?", false) {
 					typeOfUser = "Admin"
 				}
@@ -241,13 +241,13 @@ var userInstanceRootCmd = &cobra.Command{
 				zboth.Fatal().Err(toError("user exists")).Msgf("A user with email %s already exists in instance %s.", email, currentInstance)
 			}
 			if firstname == "" && isInteractive(true) {
-				firstname = getString("Please enter first name for the user", textValidate)
+				firstname = getString("Please enter first name for the user", []string{}, textValidate)
 			}
 			if lastname == "" && isInteractive(true) {
-				lastname = getString("Please enter last name for the user", textValidate)
+				lastname = getString("Please enter last name for the user", []string{}, textValidate)
 			}
 			if abbreviation == "" && isInteractive(true) {
-				abbreviation = getString("Please enter abbreviation name for the user", textValidate)
+				abbreviation = getString("Please enter abbreviation name for the user", []string{}, textValidate)
 			}
 			if passwordFlagUsed {
 				if !passwordFlagAssigned {
@@ -261,7 +261,7 @@ var userInstanceRootCmd = &cobra.Command{
 			createUser(currentInstance, email, firstname, lastname, typeOfUser, abbreviation, password)
 		case "describe":
 			if email == "" && isInteractive(true) {
-				email = getString("Please enter email address of the user you wish to describe", emailValidate)
+				email = getString("Please enter email address of the user you wish to describe", []string{}, emailValidate)
 			}
 			if userExists(currentInstance, email) {
 				// Print on screen - avoids putting this personal information in log unless debug mode is on
@@ -274,7 +274,7 @@ var userInstanceRootCmd = &cobra.Command{
 			}
 		case "update":
 			if email == "" && isInteractive(true) {
-				email = getString("Please enter email address of the user you wish to update", emailValidate)
+				email = getString("Please enter email address of the user you wish to update", []string{}, emailValidate)
 			}
 			if !isInteractive(false) {
 				if firstname == "" && lastname == "" && abbreviation == "" && !passwordFlagUsed {
@@ -327,7 +327,7 @@ var userInstanceRootCmd = &cobra.Command{
 			}
 		case "delete":
 			if email == "" && isInteractive(true) {
-				email = getString("Please enter email address of the user you wish to delete", emailValidate)
+				email = getString("Please enter email address of the user you wish to delete", []string{}, emailValidate)
 			}
 			if userExists(currentInstance, email) {
 				deleteUser(currentInstance, email)

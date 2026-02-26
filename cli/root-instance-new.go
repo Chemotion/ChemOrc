@@ -272,14 +272,14 @@ func processInstanceCreateCmd(cmd *cobra.Command, details map[string]string) (cr
 		}
 		if create {
 			if askName {
-				details["givenName"] = getString("Please enter the name of the instance you want to create", newInstanceValidate)
+				details["givenName"] = getString("Please enter the name of the instance you want to create", []string{}, newInstanceValidate)
 			}
 			if askUse {
 				details["use"] = getComposeAddressToUse("1.3.1", "install")
 			}
 			if askAddress {
 				if selectYesNo("Will this instance have its own web-address?", true) {
-					details["accessAddress"] = getString("Please enter the web-address (e.g. https://chemotion.uni.de or http://chemotion.uni.de:4100)", addressValidate)
+					details["accessAddress"] = getString("Please enter the web-address (e.g. https://chemotion.uni.de or http://chemotion.uni.de:4100)", []string{}, addressValidate)
 				}
 			}
 		}
