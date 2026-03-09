@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// check if the CLI is running interactively; if interactive == true && fail == true, then exit. Wrapper around conf.GetBool(joinKey(stateWord,"quiet")).
+// check if the CLI is running interactively; if not interactive but fail == true, then exit. Wrapper around conf.GetBool(joinKey(stateWord,"quiet")).
 func isInteractive(fail bool) (interactive bool) {
 	interactive = true
 	if conf.GetBool(joinKey(stateWord, "quiet")) { // if the key does not exist, this returns false which implies that the value of `interactive` remains unchanged

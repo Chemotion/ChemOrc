@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/manifoldco/promptui"
+	prompt "github.com/charmbracelet/huh"
 	color "github.com/mitchellh/colorstring"
 	"github.com/rs/zerolog"
 )
@@ -21,16 +21,16 @@ func selectOpt(acceptedOpts []string, msg string) (result string) {
 			msg = color.Color(toSprintf("[green][dim]{%s} ", currentInstance)) + "Select one of the following"
 		}
 	}
-	selection := promptui.Select{
-		Label: msg,
-		Items: acceptedOpts,
+	options := make([]prompt.Option[string], len(acceptedOpts))
+	for i, opt := range acceptedOpts {
+		options[i] = prompt.NewOption(opt, opt)
 	}
-	_, result, err := selection.Run()
+	err := prompt.NewSelect[string]().Title(msg).Options(options...).Value(&result).Run()
 	switch err {
 	case nil:
 		zlog.Debug().Msgf("Selected option: %s", result)
-	case promptui.ErrInterrupt, promptui.ErrEOF:
-		zboth.Fatal().Err(err).Msgf("Selection cancelled!")
+	case prompt.ErrUserAborted:
+		zboth.Fatal().Err(toError("selection prompt cancelled")).Msgf("Selection cancelled.")
 	default:
 		zboth.Fatal().Err(err).Msgf("Selection failed! Check log. ABORT!")
 	}
@@ -44,27 +44,16 @@ func selectOpt(acceptedOpts []string, msg string) (result string) {
 // A simple yes or no question prompt. Yes = True, No = False.
 func selectYesNo(question string, defValue bool) (result bool) {
 	zlog.Debug().Msgf("Binary question: %s; default is: %t", question, defValue)
-	var defValueStr string
-	if defValue {
-		defValueStr = "y"
-	} else {
-		defValueStr = "n"
-	}
-	answer := promptui.Prompt{
-		Label:     question,
-		IsConfirm: true,
-		Default:   defValueStr,
-	}
-	if _, err := answer.Run(); err == nil {
-		result = true
-	} else if err == promptui.ErrAbort {
-		result = false
-	} else if err == promptui.ErrInterrupt || err == promptui.ErrEOF {
+	result = defValue
+	err := prompt.NewConfirm().Title(question).Inline(true).Value(&result).Run()
+	switch err {
+	case nil:
+		zlog.Debug().Msgf("Selected option: %t", result)
+	case prompt.ErrUserAborted:
 		zboth.Fatal().Err(toError("yesno prompt cancelled")).Msgf("Selection cancelled.")
-	} else {
+	default:
 		zboth.Fatal().Err(err).Msgf("Selection failed! Check log. ABORT!")
 	}
-	zlog.Debug().Msgf("Selected answer: %t", result)
 	return
 }
 
@@ -152,32 +141,37 @@ func newInstanceValidate(input string) (err error) {
 }
 
 // Get user input in form of a string by giving them the message.
-func getString(message string, validator promptui.ValidateFunc) (result string) {
+func getString(message string, suggestions []string, validator func(string) error) (result string) {
 	zlog.Debug().Msgf("String prompt with message: %s", message)
-	prompt := promptui.Prompt{
-		Label:    message,
-		Validate: validator,
-	}
-	if res, err := prompt.Run(); err == nil {
-		zlog.Debug().Msgf("Given answer: %s", res)
-		result = res
-	} else if err == promptui.ErrInterrupt || err == promptui.ErrEOF {
-		zboth.Fatal().Err(toError("prompt cancelled")).Msgf("Prompt cancelled. Can't proceed without. ABORT!")
+	var err error
+	if len(suggestions) == 0 {
+		err = prompt.NewInput().Title(message).Inline(true).Validate(validator).Value(&result).Run()
 	} else {
-		zboth.Fatal().Err(err).Msgf("Prompt failed because: %s.", err.Error())
+		err = prompt.NewForm(prompt.NewGroup(prompt.
+			NewInput().Title(message).
+			Suggestions(suggestions).
+			Description("Suggested options:\n" + strings.Join(suggestions[:len(suggestions)-1], ", ") + " and " + suggestions[len(suggestions)-1] + ".").
+			Inline(false).Validate(validator).Value(&result))).Run()
+	}
+	switch err {
+	case nil:
+		zlog.Debug().Msgf("Given answer: %s", result)
+	case prompt.ErrUserAborted:
+		zboth.Fatal().Err(toError("get string prompt cancelled")).Msgf("Selection cancelled.")
+	default:
+		zboth.Fatal().Err(err).Msgf("Selection failed! Check log. ABORT!")
 	}
 	return
 }
 
-// to select an instance, gives a list to select from when less than 5, else a text input
+// to select an instance, gives a list to select from if 4 or less, else a text input
 func selectInstance(action string) (instance string) {
-	existingInstances := append(allInstances(), coloredExit)
-	if len(existingInstances) < 6 {
-		instance = selectOpt(existingInstances, toSprintf("Please pick the instance to %s:", action))
+	listInstances := allInstances()
+	if len(listInstances) < 5 {
+		instance = selectOpt(append(listInstances, coloredExit), toSprintf("Please pick the instance to %s:", action))
 	} else {
-		zboth.Info().Msg(strings.Join(append([]string{"The following instances exist: "}, allInstances()...), "\n"))
 		zlog.Debug().Msg("String prompt to select instance")
-		instance = getString("Please name the instance to "+action, instanceValidate)
+		instance = getString("Please name the instance to "+action, listInstances, instanceValidate)
 	}
 	return
 }
@@ -187,28 +181,36 @@ func getPassword() (password string) {
 	if zerolog.GlobalLevel() == zerolog.DebugLevel {
 		zboth.Warn().Err(toError("password in debug mode")).Msg(color.Color("You are gathering password while in debug mode. [red]!!! The password will be stored in the log file as plain-text !!![reset] Exit now to avoid this."))
 	}
-	prompt := promptui.Prompt{
-		Label:       "Please enter new password",
-		Mask:        '*',
-		HideEntered: true,
-	}
 	var confirm string
-	var err error
-	if confirm, err = prompt.Run(); err == nil {
+	err := prompt.NewInput().Title("Please enter new password").
+		Validate(textValidate).
+		EchoMode(prompt.EchoModePassword).
+		Inline(true).Value(&password).Run()
+	switch err {
+	case nil:
 		zlog.Debug().Msgf("Password, first attempt gathered")
-		prompt.Label = "Please re-enter the same password to confirm it"
-		if password, err = prompt.Run(); err == nil {
+		confirm = password
+		password = "" // reset value because pointer is used to display default value
+		err = prompt.NewInput().Title("Please re-enter the same password to confirm it").
+			Validate(textValidate).
+			EchoMode(prompt.EchoModePassword).
+			Inline(true).Value(&password).Run()
+		switch err {
+		case nil:
 			zlog.Debug().Msgf("Password, second attempt gathered")
 			if password != confirm {
 				zboth.Warn().Err(toError("password mismatch")).Msgf("The re-entered password does not match, please try again.")
 				password = getPassword()
 			}
+		case prompt.ErrUserAborted:
+			zboth.Fatal().Err(toError("password prompt cancelled")).Msgf("Password prompt cancelled. Can't proceed without.")
+		default:
+			zboth.Fatal().Err(err).Msgf("Password prompt failed! Check log. ABORT!")
 		}
-	}
-	if err == promptui.ErrInterrupt || err == promptui.ErrEOF {
-		zboth.Fatal().Err(toError("prompt cancelled")).Msgf("Prompt cancelled. Can't proceed without. ABORT!")
-	} else if err != nil {
-		zboth.Fatal().Err(err).Msgf("Prompt failed because: %s.", err.Error())
+	case prompt.ErrUserAborted:
+		zboth.Fatal().Err(toError("password prompt cancelled")).Msgf("Prompt cancelled. Can't proceed without.")
+	default:
+		zboth.Fatal().Err(err).Msgf("Password prompt failed! Check log. ABORT!")
 	}
 	return
 }
