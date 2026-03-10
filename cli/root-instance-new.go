@@ -238,9 +238,6 @@ func processInstanceCreateCmd(cmd *cobra.Command, details map[string]string) (cr
 	details["accessAddress"] = addressDefault
 	details["use"] = composeURL
 	if ownCall(cmd) {
-		if cmd.Flag("development").Changed {
-			zboth.Fatal().Err(toError("deprecated flag")).Msgf("This flag is now deprecated. Please use the devcontainer functionality from Chemotion ELN repository to work with development instance.")
-		}
 		if cmd.Flag("name").Changed {
 			details["givenName"] = cmd.Flag("name").Value.String()
 			if err := newInstanceValidate(details["givenName"]); err != nil {
@@ -319,5 +316,4 @@ func init() {
 	newInstanceRootCmd.Flags().StringP("name", "n", "must.be.given", "Name for the new instance")
 	newInstanceRootCmd.Flags().String("use", composeURL, "URL or filepath of the compose file to use for creating the instance")
 	newInstanceRootCmd.Flags().String("address", addressDefault, "Web-address (or hostname) for accessing the instance")
-	newInstanceRootCmd.Flags().Bool("development", false, "NOW DEPRECATED Create a development instance")
 }
