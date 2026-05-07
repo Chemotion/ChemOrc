@@ -22,12 +22,16 @@ func compareSoftwareVersion(required, current string) (err error) {
 	return
 }
 
-// confirm that virtualizer is the required minimum version
+// confirm that virtualizer is the required minimum version, and a compatible one
+// docker engine 29.4.2 does not always work with Wine (see https://github.com/moby/moby/issues/52506), which is in turn used by msconvert
 func confirmVirtualizer(minimum string) {
 	if ver, err := execShell(virtualizer + " --version"); err == nil {
 		version, errConvert := vercompare.NewVersion(strings.TrimPrefix(strings.Split(string(ver), ",")[0], "Docker version "))
 		if errConvert == nil {
 			if errCompare := compareSoftwareVersion(minimum, version.String()); errCompare == nil {
+				if blocked, _ := vercompare.NewVersion("29.4.2"); version.Equal(blocked) {
+					zboth.Fatal().Err(toError("%s version %s is blocked", virtualizer, version.String())).Msgf("%s version %s is known to break the msconvert image. Please use a different version.", virtualizer, version.String())
+				}
 				zboth.Debug().Msgf("Running version %s of %s", version.String(), virtualizer)
 			} else {
 				zboth.Fatal().Err(err).Msgf("%s is out of date. Please update it before proceeding.", virtualizer)

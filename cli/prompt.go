@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	prompt "github.com/charmbracelet/huh"
+	prompt "charm.land/huh/v2"
 	color "github.com/mitchellh/colorstring"
 	"github.com/rs/zerolog"
 )
