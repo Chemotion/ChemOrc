@@ -148,9 +148,10 @@ func createExtendedCompose(details map[string]string, use string) (extendedCompo
 		}
 	}
 	key := getNewUniqueID() + getNewUniqueID() + getNewUniqueID()
-	for _, service := range []string{"worker", "eln", "executor"} {
+	for _, service := range []string{"worker", "executor"} {
 		extendedCompose.Set(toSprintf("services.%s.environment", service), []string{"PUBLIC_URL=" + details["accessAddress"], "SECRET_KEY_BASE=" + key})
 	}
+	extendedCompose.Set(toSprintf("services.%s.environment", primaryService), []string{"PUBLIC_URL=" + details["accessAddress"], "SECRET_KEY_BASE=" + key, "OTP_SECRET_KEY=" + getNewOTP()})
 	if extendedCompose.IsSet("services.converter") {
 		extendedCompose.Set("services.converter.environment", []string{"SECRET_KEY=" + getNewUniqueID() + getNewUniqueID() + getNewUniqueID()})
 	}
