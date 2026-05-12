@@ -98,6 +98,16 @@ services:
     networks:
       - chemotion
 
+  indigo_service:
+    hostname: indigo_service
+    image: epmlsop/indigo-service:1.35.0-rc.2
+    restart: unless-stopped
+    environment:
+      - PYTHONPATH=/srv/indigo-python
+      - INDIGO_UWSGI_RUN_PARAMETERS=--plugin python3 --py-autoreload=1
+      - PYTHONDONTWRITEBYTECODE=1
+    command: supervisord -n
+
 volumes:
   chemotion:
     name: chemotion_app
