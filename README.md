@@ -29,7 +29,7 @@ ChemCLI tool supports the following versions of Chemotion ELN:
 | ELN Version                                                              | `docker-compose.yml` file                                                                                                             |
 | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
 
-| [v3.1.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v3.1.1)   | [eln-3.1.1](https://raw.githubusercontent.com/Chemotion/ChemOrc/2847a4e6e2985a812e2bc198b08421c63eac32c2/payload/docker-compose.yml)  |
+| [v3.1.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v3.1.1)   | [eln-3.1.1](https://raw.githubusercontent.com/Chemotion/ChemOrc/586f9e088f3f91e55b4b7d2665c974d5527b0e29/payload/docker-compose.yml)  |
 | [v3.0.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v3.0.0)   | [eln-3.0.0](https://raw.githubusercontent.com/Chemotion/ChemOrc/666a9f9bf1c0a985942c653972adfeaccbad1b52/payload/docker-compose.yml)  |
 | [v2.2.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v2.2.0)   | [eln-2.2.0](https://raw.githubusercontent.com/Chemotion/ChemOrc/ece196c567e6505afee853f4acf7baedfdd0770e/payload/docker-compose.yml)  |
 
