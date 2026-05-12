@@ -130,7 +130,11 @@ func instanceUpgrade(givenName, use string) {
 						}
 					}
 					if !otpSet {
-						extendedCompose.Set(joinKey("services", primaryService, "environment"), append(envVars, "OTP_SECRET_KEY="+getNewOTP()))
+						otp := getNewOTP()
+						for _, service := range []string{primaryService, "worker", "executor"} {
+							envVars := extendedCompose.GetStringSlice((joinKey("services", service, "environment")))
+							extendedCompose.Set(joinKey("services", service, "environment"), append(envVars, "OTP_SECRET_KEY="+otp))
+						}
 					}
 					if extendedCompose.IsSet(joinKey("networks", "chemotion")) {
 						// reset labels on services and volumes for future identification

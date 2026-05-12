@@ -17,7 +17,7 @@ func getComposeAddressToUse(currentVersion, action string) (use string) {
 	versions := make(map[string]string)
 	latestForThisCLIRelease := "3.1.1"
 	orderVersions := []string{latestForThisCLIRelease, "3.0.0", "2.2.0", "2.1.1"} // descending order
-	versions[latestForThisCLIRelease] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/586f9e088f3f91e55b4b7d2665c974d5527b0e29/payload/docker-compose.yml"
+	versions[latestForThisCLIRelease] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/9fe609fa353848381f3f27f84789ef36f94b8930/payload/docker-compose.yml"
 	versions["3.0.0"] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/666a9f9bf1c0a985942c653972adfeaccbad1b52/payload/docker-compose.yml"
 	versions["2.2.0"] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/ece196c567e6505afee853f4acf7baedfdd0770e/payload/docker-compose.yml"
 	versions["2.1.1"] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/8b8765e1279b9b4fbd2748245a3819abd67bae93/payload/docker-compose.yml"
@@ -149,12 +149,17 @@ func createExtendedCompose(details map[string]string, use string) (extendedCompo
 		}
 	}
 	key := getNewUniqueID() + getNewUniqueID() + getNewUniqueID()
-	for _, service := range []string{"worker", "executor"} {
-		extendedCompose.Set(toSprintf("services.%s.environment", service), []string{"PUBLIC_URL=" + details["accessAddress"], "SECRET_KEY_BASE=" + key})
+	otp := getNewOTP()
+	envVars := []string{
+		"PUBLIC_URL=" + details["accessAddress"],
+		"SECRET_KEY_BASE=" + key,
+		"OTP_SECRET_KEY=" + otp,
 	}
-	extendedCompose.Set(toSprintf("services.%s.environment", primaryService), []string{"PUBLIC_URL=" + details["accessAddress"], "SECRET_KEY_BASE=" + key, "OTP_SECRET_KEY=" + getNewOTP()})
-	if extendedCompose.IsSet("services.converter") {
-		extendedCompose.Set("services.converter.environment", []string{"SECRET_KEY=" + getNewUniqueID() + getNewUniqueID() + getNewUniqueID()})
+	for _, service := range []string{primaryService, "worker", "executor"} {
+		extendedCompose.Set(joinKey("services", service, "environment"), envVars)
+	}
+	if extendedCompose.IsSet(joinKey("services", "converter")) {
+		extendedCompose.Set(joinKey("services", "converter", "environment"), []string{"SECRET_KEY=" + getNewUniqueID() + getNewUniqueID() + getNewUniqueID()})
 	}
 	return
 }
