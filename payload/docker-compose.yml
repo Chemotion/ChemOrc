@@ -107,6 +107,8 @@ services:
       - INDIGO_UWSGI_RUN_PARAMETERS=--plugin python3 --py-autoreload=1
       - PYTHONDONTWRITEBYTECODE=1
     command: supervisord -n
+    networks:
+      - chemotion
 
 volumes:
   chemotion:
