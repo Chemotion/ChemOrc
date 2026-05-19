@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"strings"
@@ -36,6 +38,14 @@ func elementInSlice[T uint64 | int | float64 | string](elem T, slice *[]T) int {
 func getNewUniqueID() string {
 	id, _ := uuid.NewRandom()
 	return strings.Split(id.String(), "-")[0]
+}
+
+// generate a new OTP secret key i.e. 32 letter base32 string
+func getNewOTP() string {
+	otpLength := 32
+	b := make([]byte, otpLength)
+	rand.Read(b)
+	return base64.URLEncoding.EncodeToString(b)
 }
 
 // to manage config as loaded into Viper

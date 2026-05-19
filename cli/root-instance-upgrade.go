@@ -99,7 +99,6 @@ func instanceUpgrade(givenName, use string) {
 		if _, success, _ = gotoFolder(givenName), callVirtualizer(commandStr), gotoFolder("work.dir"); success {
 			conf.Set(joinKey(instancesWord, givenName, "image"), newImage)
 			writeConfig(false)
-			zboth.Info().Msgf("Instance upgraded successfully!")
 			func() {
 				// fixes bugs in extended compose
 				// update image in extended compose
@@ -122,6 +121,21 @@ func instanceUpgrade(givenName, use string) {
 						}
 					}
 					extendedCompose.Set(joinKey("services", "executor", "image"), newImage)
+					otpSet := false
+					envVars := extendedCompose.GetStringSlice((joinKey("services", primaryService, "environment")))
+					for _, envVar := range envVars {
+						if strings.HasPrefix(envVar, "OTP_SECRET_KEY") {
+							otpSet = true
+							break
+						}
+					}
+					if !otpSet {
+						otp := getNewOTP()
+						for _, service := range []string{primaryService, "worker", "executor"} {
+							envVars := extendedCompose.GetStringSlice((joinKey("services", service, "environment")))
+							extendedCompose.Set(joinKey("services", service, "environment"), append(envVars, "OTP_SECRET_KEY="+otp))
+						}
+					}
 					if extendedCompose.IsSet(joinKey("networks", "chemotion")) {
 						// reset labels on services and volumes for future identification
 						sections := []string{"services", "volumes"}
@@ -142,6 +156,7 @@ func instanceUpgrade(givenName, use string) {
 					zboth.Warn().Err(toError("failed to pull `yq`")).Msgf("Failed to pull `yq` image.")
 				}
 			}() // to be removed in version 3
+			zboth.Info().Msgf("Instance upgraded successfully!")
 		} else {
 			err = toError("%s failed", commandStr)
 			msg = toSprintf("Failed to initialize upgraded %s. Check log. ABORT!", givenName)

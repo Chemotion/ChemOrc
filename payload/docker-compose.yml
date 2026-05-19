@@ -1,11 +1,12 @@
 services:
   dbupgrade:
-    image: ptrxyz/chemotion:dbupgrade-3.0.0
+    image: ptrxyz/chemotion:dbupgrade-3.1.2
     volumes:
       - chemotion_db:/var/lib/postgresql/data/
     restart: "no"
+
   db:
-    image: ptrxyz/chemotion:db-3.0.0
+    image: ptrxyz/chemotion:db-3.1.2
     restart: unless-stopped
     hostname: db
     depends_on:
@@ -20,7 +21,7 @@ services:
       - chemotion
 
   msconvert:
-    image: ptrxyz/chemotion:msconvert-3.0.0
+    image: ptrxyz/chemotion:msconvert-3.1.2
     restart: unless-stopped
     hostname: msconvert
     volumes:
@@ -29,7 +30,7 @@ services:
       - chemotion
 
   spectra:
-    image: ptrxyz/chemotion:spectra-3.0.0
+    image: ptrxyz/chemotion:spectra-3.1.2
     restart: unless-stopped
     hostname: spectra
     volumes:
@@ -40,12 +41,13 @@ services:
       - chemotion
 
   worker:
-    image: ptrxyz/chemotion:eln-3.0.0
+    image: ptrxyz/chemotion:eln-3.1.2
     restart: unless-stopped
     environment:
       - CONFIG_ROLE=worker
       - SECRET_KEY_BASE=pleasechangeme
       - RUBYOPT=-W0
+      - OTP_SECRET_KEY=1pleasechangeme2pleasechangeme3
     depends_on:
       - db
       - eln
@@ -57,12 +59,13 @@ services:
       - chemotion
 
   eln:
-    image: ptrxyz/chemotion:eln-3.0.0
+    image: ptrxyz/chemotion:eln-3.1.2
     restart: unless-stopped
     environment:
       - CONFIG_ROLE=eln
       - SECRET_KEY_BASE=pleasechangeme
       - RUBYOPT=-W0
+      - OTP_SECRET_KEY=1pleasechangeme2pleasechangeme3
     depends_on:
       - db
       - spectra
@@ -77,7 +80,7 @@ services:
       - chemotion
 
   ketchersvc:
-    image: ptrxyz/chemotion:ketchersvc-3.0.0
+    image: ptrxyz/chemotion:ketchersvc-3.1.2
     restart: unless-stopped
     init: true
     depends_on:
@@ -87,13 +90,25 @@ services:
       - chemotion
 
   converter:
-    image: ptrxyz/chemotion:converter-3.0.0
+    image: ptrxyz/chemotion:converter-3.1.2
     restart: unless-stopped
     environment:
       - SECRET_KEY=imsupersecretandwanttobechanged
     volumes:
       - ./services/converter/profiles:/srv/chemotion/profiles
       - ./services/converter/datasets:/srv/chemotion/datasets
+    networks:
+      - chemotion
+
+  indigo_service:
+    hostname: indigo_service
+    image: epmlsop/indigo-service:1.35.0-rc.2
+    restart: unless-stopped
+    environment:
+      - PYTHONPATH=/srv/indigo-python
+      - INDIGO_UWSGI_RUN_PARAMETERS=--plugin python3 --py-autoreload=1
+      - PYTHONDONTWRITEBYTECODE=1
+    command: supervisord -n
     networks:
       - chemotion
 
