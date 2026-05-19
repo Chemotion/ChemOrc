@@ -1,11 +1,12 @@
 services:
   dbupgrade:
-    image: ptrxyz/chemotion:dbupgrade-3.1.1
+    image: ptrxyz/chemotion:dbupgrade-3.1.2
     volumes:
       - chemotion_db:/var/lib/postgresql/data/
     restart: "no"
+
   db:
-    image: ptrxyz/chemotion:db-3.1.1
+    image: ptrxyz/chemotion:db-3.1.2
     restart: unless-stopped
     hostname: db
     depends_on:
@@ -20,7 +21,7 @@ services:
       - chemotion
 
   msconvert:
-    image: ptrxyz/chemotion:msconvert-3.1.1
+    image: ptrxyz/chemotion:msconvert-3.1.2
     restart: unless-stopped
     hostname: msconvert
     volumes:
@@ -29,7 +30,7 @@ services:
       - chemotion
 
   spectra:
-    image: ptrxyz/chemotion:spectra-3.1.1
+    image: ptrxyz/chemotion:spectra-3.1.2
     restart: unless-stopped
     hostname: spectra
     volumes:
@@ -40,7 +41,7 @@ services:
       - chemotion
 
   worker:
-    image: ptrxyz/chemotion:eln-3.1.1
+    image: ptrxyz/chemotion:eln-3.1.2
     restart: unless-stopped
     environment:
       - CONFIG_ROLE=worker
@@ -58,7 +59,7 @@ services:
       - chemotion
 
   eln:
-    image: ptrxyz/chemotion:eln-3.1.1
+    image: ptrxyz/chemotion:eln-3.1.2
     restart: unless-stopped
     environment:
       - CONFIG_ROLE=eln
@@ -79,7 +80,7 @@ services:
       - chemotion
 
   ketchersvc:
-    image: ptrxyz/chemotion:ketchersvc-3.1.1
+    image: ptrxyz/chemotion:ketchersvc-3.1.2
     restart: unless-stopped
     init: true
     depends_on:
@@ -89,7 +90,7 @@ services:
       - chemotion
 
   converter:
-    image: ptrxyz/chemotion:converter-3.1.1
+    image: ptrxyz/chemotion:converter-3.1.2
     restart: unless-stopped
     environment:
       - SECRET_KEY=imsupersecretandwanttobechanged
