@@ -10,7 +10,7 @@ import (
 
 func runRailsCommand(givenName, service, command string) (output string) {
 	gotoFolder(givenName)
-	escapedCommand := command
+	var escapedCommand string
 	if strings.HasSuffix(shell, "powershell.exe") || strings.HasSuffix(shell, "pwsh.exe") {
 		escapedCommand = toSprintf("`\"%s`\"", command) // escape " with `
 	} else {
@@ -80,6 +80,7 @@ func updateUserInteraction(givenName, email string, firstname *string, lastname 
 func updateUser(givenName, email, subStr string) (err error) {
 	output := strings.Split(runRailsCommand(givenName, primaryService, toSprintf("User.find_by(email:'%s').update(%s)", email, subStr)), " ")
 	if toBool(output[len(output)-1]) {
+		zboth.Info().Msgf("User detail modification successful.")
 		return nil
 	} else {
 		return toError("user detail modification failed")
@@ -107,11 +108,16 @@ func listUsers(givenName string) (names []string) {
 }
 
 func unlockUser(givenName, email string) {
-	output := runRailsCommand(givenName, primaryService, "User.find_by(email: '"+email+"').update(locked_at: nil)")
-	if strings.Contains(output, "true") {
-		zboth.Info().Msgf("User associated with address %s unlocked successfully.", email)
+	output := strings.Split(runRailsCommand(givenName, primaryService, "User.find_by(email:'"+email+"')&.locked_at"), " ")
+	if output[len(output)-1] != "nil" {
+		subStr := toSprintf("locked_at: nil")
+		if err := updateUser(givenName, email, subStr); err != nil {
+			zboth.Fatal().Err(err).Msgf("Failed to unlock user.")
+		} else {
+			zboth.Info().Msgf("User associated with address %s unlocked successfully.", email)
+		}
 	} else {
-		zboth.Warn().Err(toError("unlocked failed")).Msgf("Failed to unlock the user with this address: %s.", email)
+		zboth.Info().Msgf("The user is already in an unlocked state.")
 	}
 }
 
@@ -136,7 +142,7 @@ var userInstanceRootCmd = &cobra.Command{
 		}
 		acceptedOpts := []string{"list", "unlock", "create", "update", "describe", "delete"}
 		selected, firstname, lastname, email, password, abbreviation, typeOfUser := "", "", "", "", "", "", "Person"
-		passwordFlagUsed, passwordFlagAssigned := false, false
+		passwordFlagUsed, passwordFlagValueProvided := false, false
 		if ownCall(cmd) {
 			if len(args) > 0 {
 				selected = args[0]
@@ -186,8 +192,9 @@ var userInstanceRootCmd = &cobra.Command{
 					password = cmd.Flag("password").Value.String()
 					if password == "<random string>" {
 						password = getNewUniqueID() + getNewUniqueID()
+						passwordFlagValueProvided = false
 					} else {
-						passwordFlagAssigned = true
+						passwordFlagValueProvided = true
 					}
 					if err := textValidate(password); err != nil {
 						zboth.Fatal().Err(err).Msgf("password is invalid")
@@ -250,8 +257,8 @@ var userInstanceRootCmd = &cobra.Command{
 				abbreviation = getString("Please enter abbreviation name for the user", []string{}, textValidate)
 			}
 			if passwordFlagUsed {
-				if !passwordFlagAssigned {
-					fmt.Printf("Setting password as for %s. Please take note - this will not be stored in logs. Password is:\n%s\n", email, password)
+				if !passwordFlagValueProvided {
+					fmt.Printf("Setting password for %s. Please take note - this will not be stored in logs. Password is:\n%s\n", email, password)
 				}
 			} else {
 				if isInteractive(true) {
@@ -283,7 +290,7 @@ var userInstanceRootCmd = &cobra.Command{
 			}
 			if userExists(currentInstance, email) {
 				if isInteractive(false) {
-					if firstname == "" && lastname == "" && abbreviation == "" && !passwordFlagUsed {
+					if firstname == "" && lastname == "" && abbreviation == "" && password == "" {
 						updateUserInteraction(currentInstance, email, &firstname, &lastname, &abbreviation, &password)
 					}
 				}
@@ -311,12 +318,12 @@ var userInstanceRootCmd = &cobra.Command{
 						zboth.Info().Msgf("Abbreviation changed successfully.")
 					}
 				}
-				if passwordFlagUsed {
+				if password != "" {
 					subStr := toSprintf("password:'%s'", password)
 					if err := updateUser(currentInstance, email, subStr); err != nil {
 						zboth.Fatal().Err(err).Msgf("Failed to change user's password. Please ensure that all conditions for password are met.")
 					} else {
-						if !passwordFlagAssigned {
+						if passwordFlagUsed && !passwordFlagValueProvided {
 							fmt.Printf("Setting password as for %s. Please take note - this will not be stored in logs. Password is:\n%s\n", email, password)
 						}
 						zboth.Info().Msgf("Password changed successfully.")

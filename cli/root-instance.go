@@ -28,20 +28,26 @@ var instanceRootCmd = &cobra.Command{
 		allIns := allInstances()
 		numIns := len(allIns)
 		if numIns > 0 {
-			if elementInSlice(instanceStatus(currentInstance), &[]string{"Exited", "Created"}) == -1 { // checks if the instance is running
+			status := instanceStatus(currentInstance)
+			if elementInSlice(status, &[]string{"Exited", "Created"}) == -1 { // checks if the instance is running
 				acceptedOpts = append(acceptedOpts, []string{"ping", "stats", "logs", "users", "consoles"}...)
 				instanceCmdTable["ping"] = pingInstanceRootCmd.Run
 				instanceCmdTable["stats"] = statInstanceRootCmd.Run
 				instanceCmdTable["logs"] = logInstanceRootCmd.Run
 				instanceCmdTable["users"] = userInstanceRootCmd.Run
 				instanceCmdTable["consoles"] = consoleInstanceRootCmd.Run
-			} else if instanceStatus(currentInstance) != "Created" {
+				instanceCmdTable["reset"] = resetInstanceRootCmd.Run
+			} else if status != "Created" {
 				// confirm that it is not a brand new instance
 				// hotfix should only be applied after the instance has been run at least once
 				// logs are only available if the instance has been run at least once
 				acceptedOpts = append(acceptedOpts, []string{"logs", "hotfix"}...)
 				instanceCmdTable["hotfix"] = hotfixInstanceRootCmd.Run
 				instanceCmdTable["logs"] = logInstanceRootCmd.Run
+			}
+			if status == "Exited" {
+				acceptedOpts = append(acceptedOpts, "reset")
+				instanceCmdTable["reset"] = resetInstanceRootCmd.Run
 			}
 			acceptedOpts = append(acceptedOpts, []string{"backup", "upgrade"}...)
 			instanceCmdTable["backup"] = backupInstanceRootCmd.Run
