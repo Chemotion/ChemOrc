@@ -25,13 +25,13 @@ func resetInstance(givenName string) (err error) {
 							err = toError("failed to `down` the instance %s because %s", givenName, err.Error())
 							return
 						}
-						zboth.Info().Msgf("Reseting instance by removing volume %s", target)
+						zboth.Info().Msgf("Resetting instance by removing volume %s", target)
 						command = toSprintf("%s volume rm %s", virtualizer, target)
 						out, err = execShell(command)
 						if strings.TrimSpace(string(out)) == target {
 							zboth.Info().Msgf("Successfully removed volume %s", target)
 							if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+"up --no-start"), gotoFolder("work.dir"); !success {
-								zboth.Fatal().Err(toError("compose up failed")).Msgf("Failed to re-establish the instance of %s. Check log. ABORT! Tread with cautio!", nameProject)
+								zboth.Fatal().Err(toError("compose up failed")).Msgf("Failed to re-establish the instance of %s. Check log. ABORT! Tread with caution!", nameProject)
 							}
 						} else {
 							if err == nil {

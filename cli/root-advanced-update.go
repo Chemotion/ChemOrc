@@ -68,7 +68,7 @@ func autoCheckUpdate() (required bool) {
 	newVer, _ := vercompare.NewVersion(getLatestVersion())
 	required = newVer.GreaterThan(existingVer)
 	conf.Set(timeKey, time.Now())
-	zboth.Debug().Msgf("The lastest version of ChemCLI is %s while this current version is %s.", newVer.String(), versionCLI)
+	zboth.Debug().Msgf("The latest version of ChemCLI is %s while this current version is %s.", newVer.String(), versionCLI)
 	if existingFile(conf.ConfigFileUsed()) {
 		if required && time.Since(lastCheckedOn).Hours() > 24 { // even though new CLI version is always checked (via GH API), a new version of ELN is determined (via downloading d-c.yml file) only once every 24 hours
 			latestCompose := parseAndPullCompose(composeURL, false)

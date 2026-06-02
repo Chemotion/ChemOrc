@@ -102,7 +102,7 @@ func upgradeThisTool(transition string) (success bool) {
 					if _, err, _ := gotoFolder(givenName), extendedCompose.WriteConfigAs(cliComposeFilename), gotoFolder("work.dir"); err == nil {
 						zboth.Info().Msgf("Written extended file %s in the above step.", cliComposeFilename)
 					} else {
-						zboth.Fatal().Err(err).Msgf("Failed to write the extended compose file to its repective folder. This is necessary for future use.")
+						zboth.Fatal().Err(err).Msgf("Failed to write the extended compose file to its respective folder. This is necessary for future use.")
 					}
 				}
 			}

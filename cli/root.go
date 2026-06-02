@@ -176,7 +176,7 @@ func Execute() {
 func init() {
 	initLog()                               // initialize logging
 	initFlags()                             // initialize flags
-	cobra.OnInitialize(initConf, bindFlags) // intitialize configuration // bind the flag
+	cobra.OnInitialize(initConf, bindFlags) // initialize configuration // bind the flag
 	rootCmd.SetVersionTemplate(toSprintf("%s version %s\n", nameCLI, versionCLI))
 	shell = determineShell()
 }
