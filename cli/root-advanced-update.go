@@ -43,9 +43,11 @@ func selfUpdate(version string) {
 
 // get the version string of the latest release
 func getLatestVersion() (version string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	client := api_gh.NewClient(nil)
 	location := strings.Split(repositoryGH, "/")
-	if release, _, err := client.Repositories.GetLatestRelease(context.Background(), location[len(location)-2], location[len(location)-1]); err == nil {
+	if release, _, err := client.Repositories.GetLatestRelease(ctx, location[len(location)-2], location[len(location)-1]); err == nil {
 		return *release.TagName
 	} else {
 		return versionCLI
