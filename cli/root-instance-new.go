@@ -74,7 +74,12 @@ func parseAndPullCompose(use string, pull bool) (compose viper.Viper) {
 		}
 	}
 	compose, err = readYAML(composeFilepath.String())
-	if err == nil && pull {
+	if err != nil {
+		zboth.Fatal().Err(err).Msgf("Failed to read the file: %s", compose.ConfigFileUsed())
+	}
+	var imagesNotFound []string
+	if pull {
+		zboth.Info().Msgf("Pulling images for the services in the compose file %s", composeFilepath.Name())
 		if success := callVirtualizer(toSprintf("compose -f %s pull", composeFilepath.String())); !success {
 			zboth.Warn().Err(toError("pull failed")).Msgf("Failed to pull images for the services in the compose file %s", composeFilepath.Name())
 			// check if we have all the images locally
@@ -83,21 +88,22 @@ func parseAndPullCompose(use string, pull bool) (compose viper.Viper) {
 				if image := compose.GetString(joinKey("services", service, "image")); image != "" {
 					// checks if the image exists locally
 					if !callVirtualizer(toSprintf("image inspect %s", image)) {
-						// before exiting, delete compose file if it was downloaded
-						if isUrl {
-							composeFilepath.Remove()
-						}
-						zboth.Fatal().Err(toError("image not found")).Msgf("Image %s not found locally. Please pull the image manually.", image)
+						imagesNotFound = append(imagesNotFound, image)
 					}
 				}
 			}
+
 		}
 	}
 	if isUrl {
-		composeFilepath.Remove()
+		if errRemove := composeFilepath.Remove(); errRemove != nil {
+			zboth.Warn().Err(errRemove).Msgf("Failed to clean up temporary download file: %s", composeFilepath.String())
+		}
 	}
-	if err != nil {
-		zboth.Fatal().Err(err).Msgf("Failed to read the file: %s", compose.ConfigFileUsed())
+	if pull && len(imagesNotFound) > 0 {
+		for _, image := range imagesNotFound {
+			zboth.Fatal().Err(toError(toSprintf("image %s not found locally", image))).Msgf("Image %s not found locally. Please pull the image manually.", image)
+		}
 	}
 	return
 }
