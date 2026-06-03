@@ -73,12 +73,26 @@ func parseAndPullCompose(use string, pull bool) (compose viper.Viper) {
 			zboth.Fatal().Err(err).Msgf("Failed: %s file not found.", use)
 		}
 	}
-	if pull {
+	compose, err = readYAML(composeFilepath.String())
+	if err == nil && pull {
 		if success := callVirtualizer(toSprintf("compose -f %s pull", composeFilepath.String())); !success {
 			zboth.Warn().Err(toError("pull failed")).Msgf("Failed to pull images for the services in the compose file %s", composeFilepath.Name())
+			// check if we have all the images locally
+			services := getSubHeadings(&compose, "services")
+			for _, service := range services {
+				if image := compose.GetString(joinKey("services", service, "image")); image != "" {
+					// checks if the image exists locally
+					if !callVirtualizer(toSprintf("image inspect %s", image)) {
+						// before exiting, delete compose file if it was downloaded
+						if isUrl {
+							composeFilepath.Remove()
+						}
+						zboth.Fatal().Err(toError("image not found")).Msgf("Image %s not found locally. Please pull the image manually.", image)
+					}
+				}
+			}
 		}
 	}
-	compose, err = readYAML(composeFilepath.String())
 	if isUrl {
 		composeFilepath.Remove()
 	}
