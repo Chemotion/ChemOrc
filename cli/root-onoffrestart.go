@@ -1,45 +1,34 @@
 package cli
 
 import (
+	"context"
 	"strings"
 	"time"
 
-	"github.com/schollz/progressbar/v3"
+	spinner "charm.land/huh/v2/spinner"
 	"github.com/spf13/cobra"
 )
 
-// show (and then remove) a progress bar that waits for an instance to start
-func waitStartSpinner(waitForSeconds int, givenName string) (waitTime int) {
-	bar := progressbar.NewOptions(
-		-1,
-		progressbar.OptionSetDescription(toSprintf("Starting %s...", givenName)),
-		progressbar.OptionSetPredictTime(false),
-		progressbar.OptionClearOnFinish(),
-		progressbar.OptionSetRenderBlankState(true),
-		progressbar.OptionSetVisibility(true),
-		progressbar.OptionSpinnerType(51),
-	)
-	startTime := time.Now()
+func isInstancePingable(ctx context.Context) (err error) {
+	givenName := ctx.Value("instance").(string)
+	var response string
 	for {
-		time.Sleep(1 * time.Second)
-		response := instancePing(givenName)
-		timeSince := int(time.Since(startTime).Seconds())
-		if response == "200 OK" {
-			waitTime = timeSince
-			bar.Finish()
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
 			return
-		}
-		if strings.Contains(response, "x509") {
-			waitTime = -1
-			bar.Finish()
-			zboth.Warn().Err(toError(response)).Msgf("Ping failed because: `certificate signed by unknown authority`.")
-			return
-		}
-		bar.Add(timeSince)
-		if timeSince >= waitForSeconds {
-			waitTime = -1
-			bar.Finish()
-			return
+		default:
+			time.Sleep(1 * time.Second)
+			response = instancePing(givenName) // dynamically checks the started instance name
+			if response == "200 OK" {
+				err = nil
+				return
+			}
+			if strings.Contains(response, "x509") {
+				err = toError("ping failed because: certificate signed by unknown authority")
+				return
+			}
+			err = toError(response)
 		}
 	}
 }
@@ -52,24 +41,29 @@ func instanceStart(givenName string) {
 		if errCreateFolder := modifyContainer(givenName, "mkdir -p", "shared/pullin", ""); !errCreateFolder {
 			zboth.Fatal().Err(toError("create shared/pullin failed")).Msgf("Failed to create folder inside the respective container.")
 		}
-		if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+"up -d"), gotoFolder("work.dir"); success {
-			waitFor := 120 // in seconds
-			if status == "Exited" {
-				waitFor = 60 // in seconds
-			}
-			zboth.Info().Msgf("Pinging instance called %s.", givenName) // because user sees the spinner
-			waitTime := waitStartSpinner(waitFor, givenName)
-			if waitTime >= 0 {
-				var timeTaken string
-				if waitTime > 0 {
-					timeTaken = toSprintf(" in %d seconds", waitTime)
-				}
-				zboth.Info().Msgf("Successfully started instance called %s%s at %s.", givenName, timeTaken, conf.GetString(joinKey(instancesWord, givenName, "accessAddress")))
+		waitFor := 120 // in seconds
+		if status == "Exited" {
+			waitFor = 60 // in seconds
+		}
+		startTime := time.Now()
+		if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+"up -d"), gotoFolder("work.dir"); !success {
+			zboth.Fatal().Msgf("Failed to start instance called %s.", givenName)
+		}
+		// wait for instance to be pingable
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, "instance", givenName)
+		ctx, cancel := context.WithTimeout(ctx, time.Duration(waitFor)*time.Second)
+		defer cancel()
+		err := spinner.New().Title(toSprintf(" Pinging instance called %s.", givenName)).ActionWithErr(isInstancePingable).Context(ctx).Type(spinner.Points).Run()
+		waitTime := int(time.Since(startTime).Seconds())
+		if err != nil {
+			if err.Error() == "ping failed because: certificate signed by unknown authority" {
+				zboth.Warn().Msgf("Ping failed because of an SSL error. This might be because the instance is using a self-signed certificate. Please check if you can access the instance at %s. If you can, then you can ignore this warning.", conf.GetString(joinKey(instancesWord, givenName, "accessAddress")))
 			} else {
 				zboth.Fatal().Err(toError("ping timeout after %d seconds", waitTime)).Msgf("Failed to ping the instance called %s. Try accessing it yourself. Also, please check logs using `%s instance %s`.", givenName, commandForCLI, logInstanceRootCmd.Use)
 			}
 		} else {
-			zboth.Fatal().Msgf("Failed to start instance called %s.", givenName)
+			zboth.Info().Msgf("Successfully started instance called %s in %d seconds at %s.", givenName, waitTime, conf.GetString(joinKey(instancesWord, givenName, "accessAddress")))
 		}
 	}
 }
