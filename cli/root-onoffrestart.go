@@ -13,22 +13,29 @@ func isInstancePingable(ctx context.Context) (err error) {
 	givenName := ctx.Value("instance").(string)
 	var response string
 	for {
+		response = instancePing(givenName) // dynamically checks the started instance name
+		if response == "200 OK" {
+			err = nil
+			return
+		}
+		if strings.Contains(response, "x509") {
+			err = toError("ping failed because: certificate signed by unknown authority")
+			return
+		}
+		// Check for permanent network or URL resolution errors
+		if strings.Contains(response, "unsupported protocol scheme") ||
+			strings.Contains(response, "no such host") ||
+			strings.Contains(response, "invalid port") ||
+			strings.Contains(response, "invalid control character") {
+			err = toError("ping failed with permanent error: %s", response)
+			return
+		}
+		err = toError(response)
 		select {
 		case <-ctx.Done():
 			err = ctx.Err()
 			return
-		default:
-			time.Sleep(1 * time.Second)
-			response = instancePing(givenName) // dynamically checks the started instance name
-			if response == "200 OK" {
-				err = nil
-				return
-			}
-			if strings.Contains(response, "x509") {
-				err = toError("ping failed because: certificate signed by unknown authority")
-				return
-			}
-			err = toError(response)
+		case <-time.After(1 * time.Second):
 		}
 	}
 }
