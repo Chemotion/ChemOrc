@@ -66,7 +66,7 @@ func modifyContainer(givenName, command, source, target string) (success bool) {
 
 // call to virtualizer (this must not end in fatal error, i.e. must return `var success bool`)
 func callVirtualizer(args string) (success bool) {
-	if strings.Contains(args, "busybox") || strings.Contains(args, "mikefarah/yq") {
+	if strings.Contains(args, "busybox") {
 		zboth.Debug().Msgf("%s will now start the execution with command `%s %s` sent to shell.", nameProject, virtualizer, args)
 	} else {
 		zboth.Info().Msgf("%s will now start the execution with command `%s %s` sent to shell.", nameProject, virtualizer, args)

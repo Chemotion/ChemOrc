@@ -104,56 +104,53 @@ func instanceUpgrade(givenName, use string) {
 				// update image in extended compose
 				// remove extra entry from extended compose
 				// rewrite labels
-				if _, success, _ = gotoFolder(givenName), callVirtualizer("pull mikefarah/yq"), gotoFolder("work.dir"); success {
-					var result []byte
-					gotoFolder(givenName)
-					extendedCompose := parseAndPullCompose(cliComposeFilename, false)
-					if extendedCompose.IsSet("networks.chemotion.labels") {
-						labels := extendedCompose.GetStringMapString("networks.chemotion.labels")
-						if strings.HasPrefix(labels["net.chemotion.cli.project"], givenName) {
-							if result, err = execShell(toSprintf("cat %s | %s run -i --rm mikefarah/yq 'del(.networks.*.labels)'", cliComposeFilename, virtualizer)); err == nil {
-								yamlFile := pathlib.NewPath(cliComposeFilename)
-								err = yamlFile.WriteFile(result)
-								if err == nil {
+				gotoFolder(givenName)
+				extendedCompose := parseAndPullCompose(cliComposeFilename, false)
+				if extendedCompose.IsSet("networks.chemotion.labels") {
+					labels := extendedCompose.GetStringMapString("networks.chemotion.labels")
+					if strings.HasPrefix(labels["net.chemotion.cli.project"], givenName) {
+						var read []byte
+						if read, err = pathlib.NewPath(cliComposeFilename).ReadFile(); err == nil {
+							var output string
+							if output, err = evaluateYamlExpression(string(read), "del(.networks.*.labels)"); err == nil {
+								if err = pathlib.NewPath(cliComposeFilename).WriteFile([]byte(output)); err == nil {
 									extendedCompose = parseAndPullCompose(cliComposeFilename, false)
 								}
 							}
 						}
 					}
-					extendedCompose.Set(joinKey("services", "executor", "image"), newImage)
-					otpSet := false
-					envVars := extendedCompose.GetStringSlice((joinKey("services", primaryService, "environment")))
-					for _, envVar := range envVars {
-						if strings.HasPrefix(envVar, "OTP_SECRET_KEY") {
-							otpSet = true
-							break
+				}
+				extendedCompose.Set(joinKey("services", "executor", "image"), newImage)
+				otpSet := false
+				envVars := extendedCompose.GetStringSlice((joinKey("services", primaryService, "environment")))
+				for _, envVar := range envVars {
+					if strings.HasPrefix(envVar, "OTP_SECRET_KEY") {
+						otpSet = true
+						break
+					}
+				}
+				if !otpSet {
+					otp := getNewOTP()
+					for _, service := range []string{primaryService, "worker", "executor"} {
+						envVars := extendedCompose.GetStringSlice((joinKey("services", service, "environment")))
+						extendedCompose.Set(joinKey("services", service, "environment"), append(envVars, "OTP_SECRET_KEY="+otp))
+					}
+				}
+				if extendedCompose.IsSet(joinKey("networks", "chemotion")) {
+					// reset labels on services and volumes for future identification
+					sections := []string{"services", "volumes"}
+					compose := parseAndPullCompose(chemotionComposeFilename, false)
+					for _, section := range sections {
+						subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services and volumes
+						for _, k := range subheadings {
+							extendedCompose.Set(joinKey(section, k, "labels"), []string{toSprintf("net.chemotion.cli.project=%s", name)})
 						}
 					}
-					if !otpSet {
-						otp := getNewOTP()
-						for _, service := range []string{primaryService, "worker", "executor"} {
-							envVars := extendedCompose.GetStringSlice((joinKey("services", service, "environment")))
-							extendedCompose.Set(joinKey("services", service, "environment"), append(envVars, "OTP_SECRET_KEY="+otp))
-						}
-					}
-					if extendedCompose.IsSet(joinKey("networks", "chemotion")) {
-						// reset labels on services and volumes for future identification
-						sections := []string{"services", "volumes"}
-						compose := parseAndPullCompose(chemotionComposeFilename, false)
-						for _, section := range sections {
-							subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services and volumes
-							for _, k := range subheadings {
-								extendedCompose.Set(joinKey(section, k, "labels"), []string{toSprintf("net.chemotion.cli.project=%s", name)})
-							}
-						}
-					}
-					err = extendedCompose.WriteConfigAs(cliComposeFilename)
-					gotoFolder("work.dir")
-					if err != nil {
-						zboth.Warn().Err(err).Msgf("Failed to correct the file %s for instance %s.", cliComposeFilename, givenName)
-					}
-				} else {
-					zboth.Warn().Err(toError("failed to pull `yq`")).Msgf("Failed to pull `yq` image.")
+				}
+				err = extendedCompose.WriteConfigAs(cliComposeFilename)
+				gotoFolder("work.dir")
+				if err != nil {
+					zboth.Warn().Err(err).Msgf("Failed to correct the file %s for instance %s.", cliComposeFilename, givenName)
 				}
 			}() // to be removed in version 3
 			zboth.Info().Msgf("Instance upgraded successfully!")

@@ -8,6 +8,7 @@ import (
 
 	"github.com/cavaliergopher/grab/v3"
 	"github.com/chigopher/pathlib"
+	"github.com/mikefarah/yq/v4/pkg/yqlib"
 	"github.com/spf13/viper"
 )
 
@@ -146,17 +147,28 @@ func execShell(command string) (result []byte, err error) {
 // to be called from the folder where file exists
 func changeExposedPort(filename string, newPort string) (err error) {
 	if existingFile(filename) {
-		var result []byte
-		if callVirtualizer("pull mikefarah/yq") { // get the latest version
-			if result, err = execShell(toSprintf("cat %s | %s run -i --rm mikefarah/yq '.%s |= sub(\"%d:\", \"%s:\")'", filename, virtualizer, joinKey("services", "eln", "ports[0]"), 4000, newPort)); err == nil {
-				yamlFile := pathlib.NewPath(filename)
-				err = yamlFile.WriteFile(result)
-			}
-		} else {
-			zboth.Fatal().Err(toError("failed to pull `yq`")).Msgf("Failed to pull `yq` image.")
+		var content []byte
+		content, err = pathlib.NewPath(filename).ReadFile()
+		if err != nil {
+			return err
+		}
+		expression := toSprintf(".%s |= sub(\"%d:\", \"%s:\")", joinKey("services", "eln", "ports[0]"), 4000, newPort)
+		var output string
+		output, err = evaluateYamlExpression(string(content), expression)
+		if err == nil {
+			yamlFile := pathlib.NewPath(filename)
+			err = yamlFile.WriteFile([]byte(output))
 		}
 	} else {
 		err = toError("file %s not found", filename)
 	}
 	return
+}
+
+func evaluateYamlExpression(inputYaml string, expression string) (string, error) {
+	prefs := yqlib.NewDefaultYamlPreferences()
+	encoder := yqlib.NewYamlEncoder(prefs)
+	decoder := yqlib.NewGoccyYAMLDecoder()
+	se := yqlib.NewStringEvaluator()
+	return se.EvaluateAll(expression, inputYaml, encoder, decoder)
 }
