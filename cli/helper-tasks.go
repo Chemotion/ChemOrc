@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/chigopher/pathlib"
-	color "github.com/mitchellh/colorstring"
 	"github.com/spf13/viper"
 )
 
@@ -19,43 +18,19 @@ func applyPatch(patchName string) (success bool) {
 		conf.Set(joinKey(stateWord, patchWord), applied)
 		zboth.Debug().Msg("No patch has been applied so far.")
 	}
+	if elementInSlice(patchName, &deprecatedPatches) != -1 {
+		zboth.Fatal().Msgf("Patch %s is deprecated.", patchName)
+		return false
+	}
 	if elementInSlice(patchName, &applied) != -1 {
 		success = true
 	} else {
-		switch patchName {
-		case "fix-173-ketcher":
-			zboth.Debug().Msgf("Applying patch: %s", patchName)
-			// patch for ELN version 1.7.3 docker-compose.yml file
-			success = true
-			for _, givenName := range allInstances() {
-				gotoFolder(givenName)
-				var err error
-				compose := parseAndPullCompose(chemotionComposeFilename, false)
-				if compose.IsSet("services.ketchersvc.image") {
-					eln_image := compose.GetString("services.eln.image")
-					ketcher_image := compose.GetString("services.ketchersvc.image")
-					if eln_image == "ptrxyz/chemotion:eln-1.7.3" && ketcher_image == "ptrxyz/chemotion:ketchersvc-1.7.3" {
-						var content []byte
-						content, err = os.ReadFile(chemotionComposeFilename)
-						if err == nil {
-							var output string
-							output, err = evaluateYamlExpression(string(content), ".services.ketchersvc.image = \"ptrxyz/chemotion:ketchersvc-1.7.2\"")
-							if err == nil {
-								yamlFile := pathlib.NewPath(chemotionComposeFilename)
-								err = yamlFile.WriteFile([]byte(output))
-							}
-						}
-						if err == nil {
-							zboth.Info().Msg(color.Color(toSprintf("[red][bold]Instance %s has been patched. Please restart it ASAP.", givenName)))
-						} else {
-							success = false
-							zboth.Warn().Err(err).Msgf("Failed to update %s for %s. Patch not completely successful.", chemotionComposeFilename, givenName)
-						}
-					}
-				}
-				gotoFolder("work.dir")
-			}
-		}
+		// switch patchName {
+		// case "<patch_name>":
+		// 	success = true	// set to true if patch is successfully applied
+		// 	success = false // set to false if patch application fails at any point
+		// 	}
+		// }
 		if success {
 			zboth.Debug().Msgf("Successfully applied patch: %s", patchName)
 			applied = append(applied, patchName)

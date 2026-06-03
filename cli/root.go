@@ -89,7 +89,9 @@ var (
 	// to have exit where required
 	coloredExit = color.Color("[red]exit")
 	// patches to apply
-	patches = []string{"fix-173-ketcher"}
+	patches = []string{}
+	// patches that are deprecated (used to be applied in older versions)
+	deprecatedPatches = []string{"fix-173-ketcher"}
 )
 
 // data type that maps a string to corresponding cobra command
