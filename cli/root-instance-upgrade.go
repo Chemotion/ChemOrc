@@ -157,6 +157,10 @@ func instanceUpgrade(givenName, use string) {
 				}
 			}() // to be removed in version 3
 			zboth.Info().Msgf("Instance upgraded successfully!")
+			// ask if user wants to start the instance right away
+			if isInteractive(false) && selectYesNo("Do you want to start the instance now?", true) {
+				instanceStart(givenName)
+			}
 		} else {
 			err = toError("%s failed", commandStr)
 			msg = toSprintf("Failed to initialize upgraded %s. Check log. ABORT!", givenName)
