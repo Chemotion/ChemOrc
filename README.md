@@ -28,6 +28,7 @@ ChemCLI tool supports the following versions of Chemotion ELN:
 
 | ELN Version | `docker-compose.yml` file |
 | ----------- | ------------------------- |
+| [v4.0.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v4.0.1) | [eln-4.0.1](https://raw.githubusercontent.com/Chemotion/ChemOrc/feat/eln-4.0.1/payload/docker-compose.yml) |
 | [v3.1.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v3.1.2) | [eln-3.1.2](https://raw.githubusercontent.com/Chemotion/ChemOrc/df94de05d9011322604c2273666d72461793cea2/payload/docker-compose.yml) |
 | [v3.0.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v3.0.0) | [eln-3.0.0](https://raw.githubusercontent.com/Chemotion/ChemOrc/666a9f9bf1c0a985942c653972adfeaccbad1b52/payload/docker-compose.yml) |
 | [v2.2.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v2.2.0) | [eln-2.2.0](https://raw.githubusercontent.com/Chemotion/ChemOrc/ece196c567e6505afee853f4acf7baedfdd0770e/payload/docker-compose.yml) |
@@ -146,6 +147,14 @@ As long as you installed an instance of Chemotion using this tool, the upgrade p
 - First make sure that you have the [latest version of this tool](#updating-the-tool).
 - Prepare for update by running `./chemCLI` > `instance` > `upgrade` > `pull image only`. This will download the latest Chemotion image from the internet if not already present on the system. Doing this saves you time later (during scheduled downtime).
 - Schedule a downtime of at least 15 minutes; more if you have a lot of data that needs to backed up. During the downtime, run `./chemCLI` > `instance` > `all actions` to backup your data followed by an upgrade of the instance.
+
+#### Upgrading to ELN version 4
+
+ELN 4 is a major release. Read the [breaking changes of v4.0.0](https://github.com/ComPlat/chemotion_ELN/blob/v4.0.1/CHANGELOG.md#breaking-changes) before upgrading; in particular, collections now belong to one person and groups reach them through shares.
+
+- Upgrade with `all actions`, so that a backup is taken first.
+- The upgrade adds a `pdftext` service, which extracts the text of uploaded safety data sheets. It has no volumes and is only reachable from the ELN container.
+- The database image is built on a newer operating system. Before the database starts, the `dbupgrade` service rebuilds the indexes that depend on text sorting, and updates database extensions to the versions the new image ships. On a large database the first start therefore takes longer than usual; let it finish.
 
 > When upgrading from ELN version 1.3, please create a backup using chemCLI version 0.2.2 or above. This is because the data backup script provided inside the container is broken and this is fixed by chemCLI tool.
 
