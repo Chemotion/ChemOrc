@@ -1,12 +1,14 @@
+# Chemotion ELN v4.0.1
+# Draft: the images come from complat/dev and are switched to the release repository before release.
 services:
   dbupgrade:
-    image: ptrxyz/chemotion:dbupgrade-3.1.2
+    image: complat/dev:dbupgrade-4.0.1
     volumes:
       - chemotion_db:/var/lib/postgresql/data/
     restart: "no"
 
   db:
-    image: ptrxyz/chemotion:db-3.1.2
+    image: complat/dev:db-4.0.1
     restart: unless-stopped
     hostname: db
     depends_on:
@@ -21,7 +23,7 @@ services:
       - chemotion
 
   msconvert:
-    image: ptrxyz/chemotion:msconvert-3.1.2
+    image: complat/dev:msconvert-3.0.26121
     restart: unless-stopped
     hostname: msconvert
     volumes:
@@ -30,7 +32,7 @@ services:
       - chemotion
 
   spectra:
-    image: ptrxyz/chemotion:spectra-3.1.2
+    image: complat/dev:spectra-1.6.0
     restart: unless-stopped
     hostname: spectra
     volumes:
@@ -41,7 +43,7 @@ services:
       - chemotion
 
   worker:
-    image: ptrxyz/chemotion:eln-3.1.2
+    image: complat/dev:eln-4.0.1
     restart: unless-stopped
     environment:
       - CONFIG_ROLE=worker
@@ -59,13 +61,17 @@ services:
       - chemotion
 
   eln:
-    image: ptrxyz/chemotion:eln-3.1.2
+    image: complat/dev:eln-4.0.1
     restart: unless-stopped
     environment:
       - CONFIG_ROLE=eln
       - SECRET_KEY_BASE=pleasechangeme
       - RUBYOPT=-W0
       - OTP_SECRET_KEY=1pleasechangeme2pleasechangeme3
+      # Origins allowed to drive the self-hosted NMRium wrapper. Defaults to the
+      # instance's PUBLIC_URL; set it (here or in shared/pullin/.env) only when the ELN
+      # is reached under more than one hostname.
+      # - NMRIUM_ALLOWED_ORIGINS=https://eln.example.org https://eln.alias.example.org
     depends_on:
       - db
       - spectra
@@ -78,9 +84,10 @@ services:
       - 4000:4000
     networks:
       - chemotion
+      - pdftext
 
   ketchersvc:
-    image: ptrxyz/chemotion:ketchersvc-3.1.2
+    image: complat/dev:ketchersvc-4.0.1
     restart: unless-stopped
     init: true
     depends_on:
@@ -90,7 +97,7 @@ services:
       - chemotion
 
   converter:
-    image: ptrxyz/chemotion:converter-3.1.2
+    image: complat/dev:converter-1.9.3
     restart: unless-stopped
     environment:
       - SECRET_KEY=imsupersecretandwanttobechanged
@@ -100,9 +107,27 @@ services:
     networks:
       - chemotion
 
+  # Extracts the text of uploaded PDFs (safety data sheets) for the ELN.
+  # The PDF travels in the request: no volumes, no secrets, no outside access, bounded resources.
+  pdftext:
+    image: complat/dev:pdftext-4.0.1
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
+    cpus: 2
+    pids_limit: 64
+    networks:
+      - pdftext
+
   indigo_service:
     hostname: indigo_service
-    image: epmlsop/indigo-service:1.35.0-rc.2
+    image: epmlsop/indigo-service:1.46.0
     restart: unless-stopped
     environment:
       - PYTHONPATH=/srv/indigo-python
@@ -124,3 +149,5 @@ volumes:
 
 networks:
   chemotion:
+  pdftext:
+    internal: true
