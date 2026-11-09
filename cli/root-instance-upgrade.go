@@ -136,15 +136,18 @@ func instanceUpgrade(givenName, use string) {
 						extendedCompose.Set(joinKey("services", service, "environment"), append(envVars, "OTP_SECRET_KEY="+otp))
 					}
 				}
+				// label every service of the new compose file, including services it adds,
+				// so that status and stats find their containers; volumes only need it
+				// for instances whose extended compose still carries the network entry
+				sections := []string{"services"}
 				if extendedCompose.IsSet(joinKey("networks", "chemotion")) {
-					// reset labels on services and volumes for future identification
-					sections := []string{"services", "volumes"}
-					compose := parseAndPullCompose(chemotionComposeFilename, false)
-					for _, section := range sections {
-						subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services and volumes
-						for _, k := range subheadings {
-							extendedCompose.Set(joinKey(section, k, "labels"), []string{toSprintf("net.chemotion.cli.project=%s", name)})
-						}
+					sections = append(sections, "volumes")
+				}
+				compose := parseAndPullCompose(chemotionComposeFilename, false)
+				for _, section := range sections {
+					subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services and volumes
+					for _, k := range subheadings {
+						extendedCompose.Set(joinKey(section, k, "labels"), []string{toSprintf("net.chemotion.cli.project=%s", name)})
 					}
 				}
 				err = extendedCompose.WriteConfigAs(cliComposeFilename)
