@@ -156,6 +156,24 @@ ELN 4 is a major release. Read the [breaking changes of v4.0.0](https://github.c
 - The upgrade adds a `pdftext` service, which extracts the text of uploaded safety data sheets. It has no volumes and is only reachable from the ELN container.
 - The database image is built on a newer operating system. Before the database starts, the `dbupgrade` service rebuilds the indexes that depend on text sorting, and updates database extensions to the versions the new image ships. On a large database the first start therefore takes longer than usual; let it finish.
 
+Files in the instance's `shared/pullin/` folder are copied over the ELN at every start: a `shared/pullin/config/<name>.yml` replaces the whole `config/<name>.yml` of the new version, and `shared/pullin/.env` is the ELN's `.env`. Before upgrading, check these:
+
+- **`config/spectra.yml`**: ELN 4 serves NMRium itself, from the instance's own address, instead of using `https://nmrium.nmrxiv.org`. A `spectra.yml` kept from ELN 3 still works, but keeps NMRium on the public site. To use the built-in one, delete your copy if you only kept it for the ChemSpectra address (the default, `http://spectra:4000/`, is unchanged), or set:
+
+  ```yaml
+  production:
+    :chemspectra:
+      :url: 'http://spectra:4000/'
+    :nmriumwrapper:
+      :url: '/nmrium/default/'
+  ```
+
+  Use `/nmrium/default/`, not a path with a version number: that path changes when the NMRium version does. NMRium only accepts the origin of `PUBLIC_URL`; if the ELN is reached under more than one hostname, list them all in `NMRIUM_ALLOWED_ORIGINS`.
+- **Mail settings** (`SMTP_*` in `shared/pullin/.env` or the compose files):
+  - `SMTP_SSL_MODE` only accepts `none` or `peer`; any other value is now ignored, and the certificate check falls back to its default.
+  - Without `SMTP_DOMAIN`, the ELN now introduces itself to the mail server with the host name of `PUBLIC_URL` (when it is a host name, not an IP address).
+  - New: `SMTP_OPEN_TIMEOUT` and `SMTP_READ_TIMEOUT`, in seconds (default 10 and 30). Raise them if your mail relay is slow to answer.
+
 > When upgrading from ELN version 1.3, please create a backup using chemCLI version 0.2.2 or above. This is because the data backup script provided inside the container is broken and this is fixed by chemCLI tool.
 
 ### Uninstallation
