@@ -2,12 +2,19 @@ package cli
 
 import (
 	"context"
+	"os"
 	"strings"
 	"time"
 
 	spinner "charm.land/huh/v2/spinner"
+	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
 )
+
+// hasTerminal reports whether both stdin and stdout are terminals, which the spinner needs
+func hasTerminal() bool {
+	return term.IsTerminal(os.Stdin.Fd()) && term.IsTerminal(os.Stdout.Fd())
+}
 
 func isInstancePingable(ctx context.Context) (err error) {
 	givenName := ctx.Value("instance").(string)
@@ -61,13 +68,20 @@ func instanceStart(givenName string) {
 		ctx = context.WithValue(ctx, "instance", givenName)
 		ctx, cancel := context.WithTimeout(ctx, time.Duration(waitFor)*time.Second)
 		defer cancel()
-		err := spinner.New().Title(toSprintf(" Pinging instance called %s.", givenName)).ActionWithErr(isInstancePingable).Context(ctx).Type(spinner.Points).Run()
+		var err error
+		if hasTerminal() {
+			err = spinner.New().Title(toSprintf(" Pinging instance called %s.", givenName)).ActionWithErr(isInstancePingable).Context(ctx).Type(spinner.Points).Run()
+		} else {
+			// without a terminal (scripts, cron) the spinner cannot run: ping without it
+			zboth.Info().Msgf("Pinging instance called %s.", givenName)
+			err = isInstancePingable(ctx)
+		}
 		waitTime := int(time.Since(startTime).Seconds())
 		if err != nil {
 			if err.Error() == "ping failed because: certificate signed by unknown authority" {
 				zboth.Warn().Msgf("Ping failed because of an SSL error. This might be because the instance is using a self-signed certificate. Please check if you can access the instance at %s. If you can, then you can ignore this warning.", conf.GetString(joinKey(instancesWord, givenName, "accessAddress")))
 			} else {
-				zboth.Fatal().Err(toError("ping timeout after %d seconds", waitTime)).Msgf("Failed to ping the instance called %s. Try accessing it yourself. Also, please check logs using `%s instance %s`.", givenName, commandForCLI, logInstanceRootCmd.Use)
+				zboth.Fatal().Err(toError("ping failed after %d seconds: %s", waitTime, err.Error())).Msgf("Failed to ping the instance called %s. Try accessing it yourself. Also, please check logs using `%s instance %s`.", givenName, commandForCLI, logInstanceRootCmd.Use)
 			}
 		} else {
 			zboth.Info().Msgf("Successfully started instance called %s in %d seconds at %s.", givenName, waitTime, conf.GetString(joinKey(instancesWord, givenName, "accessAddress")))
