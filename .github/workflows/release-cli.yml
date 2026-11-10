@@ -35,7 +35,10 @@ jobs:
         env:
           VERSION: ${{ github.ref_name }}
         run: |
-          # --version exits before any Docker or network check; the tool only needs $SHELL to be set
+          # Only the linux binary can run here; all four builds share the same LDFLAGS.
+          # cobra answers --version before its initializers (initConf, bindFlags) and before any Docker or
+          # network check, so only the package init() functions run: they need $SHELL, and they must not print
+          # anything to stdout at info level, or the comparison below fails.
           reported="$(SHELL=/bin/bash ./chemCLI --version)"
           echo "${reported}"
           if [ "${reported}" != "chemCLI version ${VERSION}" ]; then
