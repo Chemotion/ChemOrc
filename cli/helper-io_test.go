@@ -149,3 +149,61 @@ func TestChangeExposedPortWithoutPorts(t *testing.T) {
 		t.Errorf("expected an error for a compose file without ports")
 	}
 }
+
+// Rewriting the port must leave the rest of the file intact: trailing and full-line comments included.
+// (The goccy decoder used before turned `cpus: 1 # …` into `!!int '1 # …'`, which Docker Compose rejects.)
+func TestRewriteKeepsComments(t *testing.T) {
+	file := writeCompose(t, "      - 4000:4000\n")
+	extra := "    # a full-line comment\n    cpus: 1 # a trailing comment\n    mem_limit: 1g\n"
+	content, _ := os.ReadFile(file)
+	if err := os.WriteFile(file, append(content, []byte(extra)...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := carryOverExposure(file, "", "4101"); err != nil {
+		t.Fatal(err)
+	}
+	out, _ := os.ReadFile(file)
+	compose, err := readYAML(file)
+	if err != nil {
+		t.Fatalf("rewritten file does not parse: %v\n%s", err, out)
+	}
+	if got := compose.Get("services.eln.cpus"); got != 1 {
+		t.Errorf("cpus = %#v after the rewrite, want 1\n%s", got, out)
+	}
+	for _, want := range []string{"# a full-line comment", "# a trailing comment", "4101:4000"} {
+		if !strings.Contains(string(out), want) {
+			t.Errorf("rewritten file lost %q:\n%s", want, out)
+		}
+	}
+}
+
+// The payload shipped to users must survive the rewrite every install and upgrade applies to it.
+func TestPayloadSurvivesPortRewrite(t *testing.T) {
+	payload, err := os.ReadFile(filepath.Join("..", "payload", "docker-compose.yml"))
+	if err != nil {
+		t.Skip("payload not found:", err)
+	}
+	file := filepath.Join(t.TempDir(), "docker-compose.yml")
+	if err := os.WriteFile(file, payload, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := carryOverExposure(file, "127.0.0.1:", "4101"); err != nil {
+		t.Fatal(err)
+	}
+	compose, err := readYAML(file)
+	if err != nil {
+		t.Fatalf("rewritten payload does not parse: %v", err)
+	}
+	if got := firstMapping(t, file); got != "127.0.0.1:4101:4000" {
+		t.Errorf("port mapping = %q, want 127.0.0.1:4101:4000", got)
+	}
+	for _, service := range getSubHeadings(&compose, "services") {
+		key := "services." + service + ".image"
+		if compose.GetString(key) == "" {
+			t.Errorf("%s lost its image after the rewrite", service)
+		}
+	}
+	if v := compose.Get("services.pdftext.cpus"); v != nil && v != 1 {
+		t.Errorf("pdftext cpus = %#v after the rewrite, want 1", v)
+	}
+}
