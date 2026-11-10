@@ -66,6 +66,11 @@ services:
   eln:
     image: complat/dev:eln-4.0.1
     restart: unless-stopped
+    # The first start after an upgrade migrates the database and compiles the assets before the
+    # ELN answers (several minutes on a large instance). Give it 20 minutes before a failing
+    # check counts, so the services waiting for eln (ketchersvc) do not fail to start.
+    healthcheck:
+      start_period: 20m
     environment:
       - CONFIG_ROLE=eln
       - SECRET_KEY_BASE=pleasechangeme
