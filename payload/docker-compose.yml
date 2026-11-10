@@ -1,14 +1,13 @@
 # Chemotion ELN v4.0.1
-# Draft: the images come from complat/dev and are switched to the release repository before release.
 services:
   dbupgrade:
-    image: complat/dev:dbupgrade-4.0.1
+    image: complat/chemotion:dbupgrade-4.0.1
     volumes:
       - chemotion_db:/var/lib/postgresql/data/
     restart: "no"
 
   db:
-    image: complat/dev:db-4.0.1
+    image: complat/chemotion:db-4.0.1
     restart: unless-stopped
     # The 10 s default ends in SIGKILL when a large database is still writing its shutdown
     # checkpoint; dbupgrade then skips its maintenance on the next start.
@@ -26,7 +25,7 @@ services:
       - chemotion
 
   msconvert:
-    image: complat/dev:msconvert-3.0.26121
+    image: complat/chemotion:msconvert-4.0.1
     restart: unless-stopped
     hostname: msconvert
     volumes:
@@ -35,7 +34,7 @@ services:
       - chemotion
 
   spectra:
-    image: complat/dev:spectra-1.6.0
+    image: complat/chemotion:spectra-4.0.1
     restart: unless-stopped
     hostname: spectra
     volumes:
@@ -46,7 +45,7 @@ services:
       - chemotion
 
   worker:
-    image: complat/dev:eln-4.0.1
+    image: complat/chemotion:eln-4.0.1
     restart: unless-stopped
     environment:
       - CONFIG_ROLE=worker
@@ -64,7 +63,7 @@ services:
       - chemotion
 
   eln:
-    image: complat/dev:eln-4.0.1
+    image: complat/chemotion:eln-4.0.1
     restart: unless-stopped
     # The first start after an upgrade migrates the database and compiles the assets before the
     # ELN answers (several minutes on a large instance). Give it 20 minutes before a failing
@@ -95,7 +94,7 @@ services:
       - pdftext
 
   ketchersvc:
-    image: complat/dev:ketchersvc-4.0.1
+    image: complat/chemotion:ketchersvc-4.0.1
     restart: unless-stopped
     init: true
     depends_on:
@@ -105,7 +104,7 @@ services:
       - chemotion
 
   converter:
-    image: complat/dev:converter-1.9.3
+    image: complat/chemotion:converter-4.0.1
     restart: unless-stopped
     environment:
       - SECRET_KEY=imsupersecretandwanttobechanged
@@ -118,7 +117,7 @@ services:
   # Extracts the text of uploaded PDFs (safety data sheets) for the ELN.
   # The PDF travels in the request: no volumes, no secrets, no outside access, bounded resources.
   pdftext:
-    image: complat/dev:pdftext-4.0.1
+    image: complat/chemotion:pdftext-4.0.1
     restart: unless-stopped
     read_only: true
     tmpfs:
