@@ -9,6 +9,32 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// The labels for a service or volume in the extended compose file: the existing ones, with the CLI's project
+// label set to `name` (replacing an older value of it). Labels added by an admin, e.g. for a reverse proxy, are kept.
+// Only the list form (`- key=value`) can be edited; a map is reported with ok == false and must be left alone,
+// because viper reads the dots in its keys as nesting.
+func withProjectLabel(existing any, name string) (labels []string, ok bool) {
+	const key = "net.chemotion.cli.project"
+	var current []string
+	switch l := existing.(type) {
+	case nil:
+	case []string:
+		current = l
+	case []any:
+		for _, item := range l {
+			current = append(current, toSprintf("%v", item))
+		}
+	default:
+		return nil, false
+	}
+	for _, label := range current {
+		if label != key && !strings.HasPrefix(label, key+"=") {
+			labels = append(labels, label)
+		}
+	}
+	return append(labels, key+"="+name), true
+}
+
 func upgradeRequired() (toUpgrade []string) {
 	if conf.IsSet(joinKey(stateWord, "latest_eln")) {
 		if latestVersion, err := vercompare.NewVersion(conf.GetString(joinKey(stateWord, "latest_eln"))); err == nil {
@@ -151,7 +177,12 @@ func instanceUpgrade(givenName, use string) {
 				for _, section := range sections {
 					subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services and volumes
 					for _, k := range subheadings {
-						extendedCompose.Set(joinKey(section, k, "labels"), []string{toSprintf("net.chemotion.cli.project=%s", name)})
+						key := joinKey(section, k, "labels")
+						if labels, ok := withProjectLabel(extendedCompose.Get(key), name); ok {
+							extendedCompose.Set(key, labels)
+						} else {
+							zboth.Warn().Msgf("The labels of %s in %s are not a list; add `net.chemotion.cli.project=%s` to them yourself, so that %s finds this container.", key, cliComposeFilename, name, nameCLI)
+						}
 					}
 				}
 				err = extendedCompose.WriteConfigAs(cliComposeFilename)
