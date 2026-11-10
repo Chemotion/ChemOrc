@@ -18,14 +18,31 @@ jobs:
         with:
           go-version-file: "go.mod"
       - name: Build Go for all OSes
+        env:
+          VERSION: ${{ github.ref_name }}
         run: |
           cp   payload/docker-compose.yml .
           cp   payload/backup.sh .
-          go   mod        verify          
-          CGO_ENABLED=0   GOOS=linux    GOARCH=amd64  go  build -trimpath -ldflags="-s -w -X github.com/${{ github.repository }}/cli.versionCLI=${{ github.ref_name }}" -o chemCLI
-          CGO_ENABLED=0   GOOS=darwin   GOARCH=arm64  go  build -trimpath -ldflags="-s -w -X github.com/${{ github.repository }}/cli.versionCLI=${{ github.ref_name }}" -o chemCLI.arm.osx
-          CGO_ENABLED=0   GOOS=darwin   GOARCH=amd64  go  build -trimpath -ldflags="-s -w -X github.com/${{ github.repository }}/cli.versionCLI=${{ github.ref_name }}" -o chemCLI.amd.osx
-          CGO_ENABLED=0   GOOS=windows  GOARCH=amd64  go  build -trimpath -ldflags="-s -w -X github.com/${{ github.repository }}/cli.versionCLI=${{ github.ref_name }}" -o chemCLI.exe
+          go   mod        verify
+          # the -X path must be the Go module path from go.mod (github.com/Chemotion/ChemCLI), not the
+          # repository name (Chemotion/ChemOrc): Go silently ignores -X for a package that does not exist
+          LDFLAGS="-s -w -X $(go list -m)/cli.versionCLI=${VERSION}"
+          CGO_ENABLED=0   GOOS=linux    GOARCH=amd64  go  build -trimpath -ldflags="${LDFLAGS}" -o chemCLI
+          CGO_ENABLED=0   GOOS=darwin   GOARCH=arm64  go  build -trimpath -ldflags="${LDFLAGS}" -o chemCLI.arm.osx
+          CGO_ENABLED=0   GOOS=darwin   GOARCH=amd64  go  build -trimpath -ldflags="${LDFLAGS}" -o chemCLI.amd.osx
+          CGO_ENABLED=0   GOOS=windows  GOARCH=amd64  go  build -trimpath -ldflags="${LDFLAGS}" -o chemCLI.exe
+      - name: Check that the binary reports the tag as its version
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          # --version exits before any Docker or network check; the tool only needs $SHELL to be set
+          reported="$(SHELL=/bin/bash ./chemCLI --version)"
+          echo "${reported}"
+          if [ "${reported}" != "chemCLI version ${VERSION}" ]; then
+            echo "::error::binary reports '${reported}', expected 'chemCLI version ${VERSION}'"
+            exit 1
+          fi
+          rm -f chem_cli.log
       - name: Release Binaries
         uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/')
