@@ -10,6 +10,9 @@ services:
   db:
     image: complat/dev:db-4.0.1
     restart: unless-stopped
+    # The 10 s default ends in SIGKILL when a large database is still writing its shutdown
+    # checkpoint; dbupgrade then skips its maintenance on the next start.
+    stop_grace_period: 2m
     hostname: db
     depends_on:
       dbupgrade:
