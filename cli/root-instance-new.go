@@ -37,17 +37,42 @@ func offeredVersions(currentVersion, minimumVersion string, orderVersions []stri
 	return
 }
 
+// Every ELN version this CLI offers, newest first, with the commit of this repository whose
+// payload/docker-compose.yml shipped it. The first entry is the latest version known to this release.
+// This is also the record of which compose file belonged to which ELN release: entries are only ever added,
+// pinned to the commit that was released (see the git history of this file for when each was added).
+var elnComposeFiles = []struct{ version, commit string }{
+	{"4.0.1", "feat/eln-4.0.1"}, // TODO: pin to the version-0.2 commit with the final 4.0.1 payload, before the release
+	{"3.1.2", "df94de05d9011322604c2273666d72461793cea2"},
+	{"3.0.0", "666a9f9bf1c0a985942c653972adfeaccbad1b52"},
+	{"2.2.0", "ece196c567e6505afee853f4acf7baedfdd0770e"},
+	{"2.1.1", "8b8765e1279b9b4fbd2748245a3819abd67bae93"},
+	{"1.10.5", "3a9339fe7156da32d786975482aa97c993a997b9"},
+	{"1.9.3", "b7ad83fba1e1db6c5525a11b06bf7eed59a769f6"},
+	{"1.9.2", "f30d8ae2dfdfb0160c3ceef30d5540e404c4f23a"},
+	{"1.8.2", "7a62248a40416586e5d5e7d1a77adb6fe4f360fe"},
+	{"1.8.1", "681cab48409d6c9a6be51ac5903e04890467d998"},
+	{"1.8.0", "0664a5667d06da7898e83a11e31e4b471235daf1"},
+	{"1.7.3", "b8bb1280a6e042b96b8d3e71d030709b113686bc"},
+	{"1.7.2", "b07becc0f421a76aaee6f9e32ed6bf49f942258b"},
+	{"1.6.2", "e577832edaba14fa21ee9aa9288e4b00052729c8"},
+	{"1.5.4", "548ead617a552307f30d5051e72c01d95e99b30f"},
+}
+
+// URL of the compose file shipped with an ELN version, at the given commit (or ref) of this repository
+func elnComposeURL(commit string) string {
+	return "https://raw.githubusercontent.com/Chemotion/ChemOrc/" + commit + "/payload/docker-compose.yml"
+}
+
 // helper to determine the required compose file; `minimumVersion` limits the versions offered (empty: no limit)
 func getComposeAddressToUse(currentVersion, minimumVersion, action string) (use string) {
 	versions := make(map[string]string)
-	latestForThisCLIRelease := "4.0.1"
-	orderVersions := []string{latestForThisCLIRelease, "3.1.2", "3.0.0", "2.2.0", "2.1.1"} // descending order
-	// TODO: pin to the commit that sets payload/docker-compose.yml to the 4.0.1 release images
-	versions[latestForThisCLIRelease] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/feat/eln-4.0.1/payload/docker-compose.yml"
-	versions["3.1.2"] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/df94de05d9011322604c2273666d72461793cea2/payload/docker-compose.yml"
-	versions["3.0.0"] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/666a9f9bf1c0a985942c653972adfeaccbad1b52/payload/docker-compose.yml"
-	versions["2.2.0"] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/ece196c567e6505afee853f4acf7baedfdd0770e/payload/docker-compose.yml"
-	versions["2.1.1"] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/8b8765e1279b9b4fbd2748245a3819abd67bae93/payload/docker-compose.yml"
+	orderVersions := make([]string, 0, len(elnComposeFiles))
+	for _, e := range elnComposeFiles {
+		versions[e.version] = elnComposeURL(e.commit)
+		orderVersions = append(orderVersions, e.version)
+	}
+	latestForThisCLIRelease := orderVersions[0]
 	validVersions := offeredVersions(currentVersion, minimumVersion, orderVersions)
 	if conf.IsSet(joinKey(stateWord, "latest_eln")) {
 		latest := conf.GetString(joinKey(stateWord, "latest_eln"))
