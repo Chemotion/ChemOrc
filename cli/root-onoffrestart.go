@@ -37,10 +37,10 @@ func isInstancePingable(ctx context.Context) (err error) {
 			err = toError("ping failed with permanent error: %s", response)
 			return
 		}
-		err = toError(response)
 		select {
 		case <-ctx.Done():
-			err = ctx.Err()
+			// keep the last ping response: it says why the instance did not answer (e.g. connection refused)
+			err = toError("%w (last response: %s)", ctx.Err(), response)
 			return
 		case <-time.After(1 * time.Second):
 		}
