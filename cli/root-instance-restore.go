@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"path/filepath"
+
 	"github.com/spf13/cobra"
 )
 
@@ -12,6 +14,13 @@ var restoreInstanceRootCmd = &cobra.Command{
 		var db, data string
 		if ownCall(cmd) {
 			db, data = cmd.Flag("db").Value.String(), cmd.Flag("data").Value.String()
+			for flag, path := range map[string]string{"db": db, "data": data} {
+				if path != "" {
+					if err := fileValidate(path); err != nil {
+						zboth.Fatal().Err(err).Msgf("Cannot use %s as the --%s backup file: %s", path, flag, err.Error())
+					}
+				}
+			}
 		}
 		if (db == "" || data == "") && isInteractive(true) {
 			if db == "" {
@@ -21,13 +30,23 @@ var restoreInstanceRootCmd = &cobra.Command{
 				data = getString("Please enter the absolute path of your data backup file (e.g. /path/to/backup.data.tar.gz)", []string{}, fileValidate)
 			}
 		}
+		// the paths were checked from the current folder, but `docker cp` runs from the instance's folder: make them absolute
+		for _, path := range []*string{&db, &data} {
+			if abs, err := filepath.Abs(*path); err == nil {
+				*path = abs
+			} else {
+				zboth.Fatal().Err(err).Msgf("Cannot determine the absolute path of %s.", *path)
+			}
+		}
 		details := make(map[string]string)
 		if create := processInstanceCreateCmd(cmd, details); create {
 			var success bool
 			if success = instanceCreate(details); success {
 				zboth.Info().Msgf("Successfully created a new production instance. Now restoring the backup into it")
-				if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(toSprintf("cp %s %s-%s-%d:/backup/backup.data.tar.gz", data, details["name"], primaryService, rollNum)), gotoFolder("work.dir"); success {
-					if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(toSprintf("cp %s %s-%s-%d:/backup/backup.sql.gz", db, details["name"], primaryService, rollNum)), gotoFolder("work.dir"); success {
+				container := toSprintf("%s-%s-%d", details["name"], primaryService, rollNum)
+				// paths are passed as single arguments so that they may contain spaces
+				if _, success, _ = gotoFolder(details["givenName"]), callVirtualizerArgs("cp", data, container+":/backup/backup.data.tar.gz"), gotoFolder("work.dir"); success {
+					if _, success, _ = gotoFolder(details["givenName"]), callVirtualizerArgs("cp", db, container+":/backup/backup.sql.gz"), gotoFolder("work.dir"); success {
 						zboth.Info().Msgf("Backup files copied successfully. Now attempting restore them!")
 						if _, success, _ = gotoFolder(details["givenName"]), callVirtualizer(composeCall+"--profile execution run --rm -e FORCE_DB_RESET=1 executor chemotion restore"), gotoFolder("work.dir"); success {
 							zboth.Info().Msgf("Restoration completed successfully. Once switched on, `%s` can be found at: %s", details["givenName"], details["accessAddress"])
@@ -55,10 +74,26 @@ var restoreInstanceRootCmd = &cobra.Command{
 				_, _, _ = gotoFolder(details["givenName"]), callVirtualizer(composeCall+"stop"), gotoFolder("work.dir")
 			} else {
 				zboth.Warn().Msgf("Restoration process failed. Check LOG!")
-				if selectYesNo(toSprintf("Do you want to remove this instance called %s because the restoration process failed?", details["givenName"]), true) {
-					if err := instanceRemove(details["givenName"], true); err != nil {
-						zboth.Fatal().Err(err).Msgf("Failed to remove the instance called %s.", details["givenName"])
+				if isInteractive(false) {
+					if selectYesNo(toSprintf("Do you want to remove this instance called %s because the restoration process failed?", details["givenName"]), true) {
+						if err := instanceRemove(details["givenName"], true); err != nil {
+							zboth.Fatal().Err(err).Msgf("Failed to remove the instance called %s.", details["givenName"])
+						}
 					}
+				} else {
+					// no prompt in quiet mode: keep the instance rather than delete anything unasked,
+					// and point to the command that can actually remove it (`instance remove` refuses the only and the selected instance)
+					givenName := details["givenName"]
+					var how string
+					switch {
+					case len(allInstances()) == 1:
+						how = toSprintf("As it is the only instance, remove it with `%s %s %s` (interactive only; this removes the whole installation)", commandForCLI, advancedRootCmd.Use, uninstallAdvancedRootCmd.Use)
+					case givenName == currentInstance:
+						how = toSprintf("As it is the selected instance, first select another one with `%s instance %s -n <name>`, then remove it with `%s instance %s -n %s --force -q`", commandForCLI, switchInstanceRootCmd.Use, commandForCLI, removeInstanceRootCmd.Use, givenName)
+					default:
+						how = toSprintf("Remove it with `%s instance %s -n %s --force -q`", commandForCLI, removeInstanceRootCmd.Use, givenName)
+					}
+					zboth.Warn().Msgf("The instance called %s was kept. %s if it is not needed.", givenName, how)
 				}
 			}
 		}

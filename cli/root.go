@@ -34,6 +34,7 @@ package cli
 import (
 	"os"
 	"strings"
+	"testing"
 
 	"github.com/chigopher/pathlib"
 	color "github.com/mitchellh/colorstring"
@@ -176,9 +177,19 @@ func Execute() {
 }
 
 func init() {
-	initLog()                               // initialize logging
+	// under `go test`, skip the start-up that needs a real run: initLog would write chem_cli.log next to the tests
+	// and read the test binary's own flags (e.g. -test.testlogfile=/tmp/go-build…) as -d/-q, and determineShell
+	// would abort without $SHELL; the loggers stay silent instead
+	underTest := testing.Testing()
+	if underTest {
+		zlog, zboth = zerolog.Nop(), zerolog.Nop()
+	} else {
+		initLog() // initialize logging
+	}
 	initFlags()                             // initialize flags
 	cobra.OnInitialize(initConf, bindFlags) // initialize configuration // bind the flag
 	rootCmd.SetVersionTemplate(toSprintf("%s version %s\n", nameCLI, versionCLI))
-	shell = determineShell()
+	if !underTest {
+		shell = determineShell()
+	}
 }
