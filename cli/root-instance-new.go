@@ -16,19 +16,27 @@ import (
 const oldestInstallableELN = "3.0.0"
 
 // the versions to offer, from `orderVersions` (newest first): those newer than `currentVersion`, the current one
-// marked as such, and none older than `minimumVersion` (no lower limit if it is empty)
+// marked as such, and none older than `minimumVersion` (no lower limit if it is empty). A `currentVersion` that
+// cannot be read (e.g. an image tag like `eln-latest`) is treated as unknown: every version is offered.
 func offeredVersions(currentVersion, minimumVersion string, orderVersions []string) (offered []string) {
-	now, _ := vercompare.NewVersion(currentVersion)
+	now, errNow := vercompare.NewVersion(currentVersion)
+	if errNow != nil {
+		zlog.Debug().Msgf("Current ELN version %q not understood, offering every version.", currentVersion)
+		now = nil
+	}
 	var minimum *vercompare.Version
 	if minimumVersion != "" {
 		minimum, _ = vercompare.NewVersion(minimumVersion)
 	}
 	for _, version := range orderVersions {
-		planned, _ := vercompare.NewVersion(version)
+		planned, err := vercompare.NewVersion(version)
+		if err != nil {
+			continue
+		}
 		if minimum != nil && planned.LessThan(minimum) {
 			continue
 		}
-		if planned.GreaterThan(now) {
+		if now == nil || planned.GreaterThan(now) {
 			offered = append(offered, planned.String())
 		} else if planned.Equal(now) {
 			offered = append(offered, now.String()+" - current version")
@@ -64,6 +72,39 @@ func elnComposeURL(commit string) string {
 	return "https://raw.githubusercontent.com/Chemotion/ChemOrc/" + commit + "/payload/docker-compose.yml"
 }
 
+// Mark or add the latest stable ELN version, as last read from the latest release's compose file
+// (`cli_state.latest_eln`, which can be stale, e.g. after downloading a new chemCLI by hand):
+//   - `newest` itself is only marked, where it is offered, and keeps its pinned compose file;
+//   - a version newer than `newest` (this CLI's newest), i.e. released after this CLI, is offered first with the
+//     latest release's compose file, unless the instance already runs it or something newer;
+//   - anything else (older, or not a version) is ignored.
+func withLatestELN(offered []string, versions map[string]string, newest, currentVersion, latest string) []string {
+	const mark = " - latest stable version"
+	if _, known := versions[latest]; known {
+		if latest != newest {
+			return offered // a known but older version: a stale value, not the latest
+		}
+		for i := range offered {
+			if offered[i] == latest {
+				offered[i] = latest + mark
+			}
+		}
+		return offered
+	}
+	latestV, err := vercompare.NewVersion(latest)
+	if err != nil {
+		return offered
+	}
+	if newestV, err := vercompare.NewVersion(newest); err != nil || !latestV.GreaterThan(newestV) {
+		return offered // older than what this CLI knows: a stale value
+	}
+	if now, err := vercompare.NewVersion(currentVersion); err == nil && !latestV.GreaterThan(now) {
+		return offered // the instance already runs it (or something newer)
+	}
+	versions[latest] = composeURL
+	return append([]string{latest + mark}, offered...)
+}
+
 // helper to determine the required compose file; `minimumVersion` limits the versions offered (empty: no limit)
 func getComposeAddressToUse(currentVersion, minimumVersion, action string) (use string) {
 	versions := make(map[string]string)
@@ -72,20 +113,9 @@ func getComposeAddressToUse(currentVersion, minimumVersion, action string) (use 
 		versions[e.version] = elnComposeURL(e.commit)
 		orderVersions = append(orderVersions, e.version)
 	}
-	latestForThisCLIRelease := orderVersions[0]
 	validVersions := offeredVersions(currentVersion, minimumVersion, orderVersions)
 	if conf.IsSet(joinKey(stateWord, "latest_eln")) {
-		latest := conf.GetString(joinKey(stateWord, "latest_eln"))
-		if latest == latestForThisCLIRelease {
-			for i := range validVersions {
-				if validVersions[i] == latest {
-					validVersions[i] = latest + " - latest stable version"
-				}
-			}
-		} else {
-			validVersions = append([]string{latest + " - latest stable version"}, validVersions...)
-			versions[latest] = composeURL
-		}
+		validVersions = withLatestELN(validVersions, versions, orderVersions[0], currentVersion, conf.GetString(joinKey(stateWord, "latest_eln")))
 	}
 	if len(validVersions) != 0 {
 		selected := selectOpt(validVersions, toSprintf("Select the version of ELN you want to %s", action))
