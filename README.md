@@ -180,7 +180,7 @@ ELN 4 is a major release. Read the [breaking changes of v4.0.0](https://github.c
 **After the upgrade**
 
 - If the structure editor looks empty for a user, reloading the page once fixes it.
-- Structure search works as before. Only after **restoring a backup** into an instance, rebuild its structure-search table with `chemotion rdkit-rebuild` in the instance console (`./chemCLI instance consoles`): about 3 minutes for 450,000 samples.
+- Structure search works as before. A restore rebuilds the structure-search table by itself (a few minutes on a large database). Only if the restore log reports `rdkit.mols rebuild failed`, run `chemotion rdkit-rebuild` in the instance console (`./chemCLI instance consoles`): about 3 minutes for 450,000 samples.
 
 **What the upgrade adds**
 
