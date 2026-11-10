@@ -51,10 +51,14 @@ func instanceUpgrade(givenName, use string) {
 	// get port from old compose
 	oldComposeFile := workDir.Join(instancesWord, name, chemotionComposeFilename)
 	oldCompose := parseAndPullCompose(oldComposeFile.String(), false)
-	if oldCompose.IsSet(joinKey("services", primaryService, "ports")) {
-		if err := changeExposedPort(newComposeFile.String(), oldCompose.GetStringSlice(joinKey("services", primaryService, "ports"))[0][:4]); err != nil {
+	// carry the bind address and host port over, so the instance stays published exactly as before
+	if bindPrefix, hostPort, set, err := publishedExposure(&oldCompose); set {
+		if err == nil {
+			err = carryOverExposure(newComposeFile.String(), bindPrefix, hostPort)
+		}
+		if err != nil {
 			newComposeFile.Remove()
-			zboth.Fatal().Err(err).Msgf("Failed to update the port in downloaded compose file. This is necessary for future use. The file was removed.")
+			zboth.Fatal().Err(err).Msgf("Cannot carry the published port of %s over to the new compose file; nothing was changed. Write %s in %s as e.g. `4100:4000` or `127.0.0.1:4100:4000`, then try again.", givenName, joinKey("services", primaryService, "ports"), oldComposeFile.String())
 		}
 	} else {
 		zboth.Warn().Msgf("The entry %s was not found in the existing %s, remember to configure the new file as per your settings.", joinKey("services", primaryService, "ports"), chemotionComposeFilename)

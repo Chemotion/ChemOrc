@@ -14,11 +14,14 @@ import (
 // update the tool itself
 func selfUpdate(version string) {
 	oldVersion := pathlib.NewPath(commandForCLI)
-	stat, _ := oldVersion.Stat()
+	stat, errStat := oldVersion.Stat()
+	if errStat != nil { // e.g. when called through $PATH: os.Args[0] is then not a path to the file
+		zboth.Fatal().Err(errStat).Msgf("Cannot find the running executable at %s. Run %s from its own folder (e.g. as ./%s) to update it.", commandForCLI, nameCLI, nameCLI)
+	}
 	cliFileName := oldVersion.Name()
 	url := toSprintf("%s/releases/download/%s/%s", repositoryGH, version, cliFileName)
 	newVersion := downloadFile(url, workDir.Join(toSprintf("%s.new", cliFileName)).String())
-	if err := newVersion.Chmod(stat.Mode() | 100); err != nil { // make sure that it remains executable for the ErrUseLastResponse
+	if err := newVersion.Chmod(stat.Mode() | 0o100); err != nil { // make sure that it remains executable for the user
 		zboth.Warn().Err(err).Msgf("Could not grant executable permission to the downloaded file. Please do it yourself.")
 	}
 	if errOld := oldVersion.RenameStr(toSprintf("%s.old", cliFileName)); errOld == nil {

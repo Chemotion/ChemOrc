@@ -15,7 +15,7 @@ var instanceRootCmd = &cobra.Command{
 		allIns := allInstances()
 		numIns := len(allIns)
 		if numIns == 1 && currentInstance != allIns[0] {
-			zboth.Info().Msgf("Changing selected instance to %s as it is the only instance.", currentInstance)
+			zboth.Info().Msgf("Changing selected instance to %s as it is the only instance.", allIns[0])
 			instanceSwitch(allIns[0])
 		}
 		if numIns == 0 && elementInSlice(cmd.Use, &[]string{"new", "restore"}) == -1 {
@@ -39,10 +39,8 @@ var instanceRootCmd = &cobra.Command{
 				instanceCmdTable["reset"] = resetInstanceRootCmd.Run
 			} else if status != "Created" {
 				// confirm that it is not a brand new instance
-				// hotfix should only be applied after the instance has been run at least once
 				// logs are only available if the instance has been run at least once
-				acceptedOpts = append(acceptedOpts, []string{"logs", "hotfix"}...)
-				instanceCmdTable["hotfix"] = hotfixInstanceRootCmd.Run
+				acceptedOpts = append(acceptedOpts, "logs")
 				instanceCmdTable["logs"] = logInstanceRootCmd.Run
 			}
 			if status == "Exited" {

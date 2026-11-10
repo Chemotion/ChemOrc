@@ -123,14 +123,16 @@ func getFreshPort() (port uint64) {
 	if len(existingPorts) == 0 {
 		port = firstPort
 	} else {
-		for i := firstPort + 101; i <= maxInstancesOfKind+(firstPort+101); i++ {
+		// ports firstPort+101 up to (and excluding) firstPort+101+maxInstancesOfKind are available for allocation
+		found := false
+		for i := firstPort + 101; i < (firstPort+101)+maxInstancesOfKind; i++ {
 			if elementInSlice(i, &existingPorts) == -1 {
 				port = i
+				found = true
 				break
 			}
 		}
-
-		if port == (firstPort+101)+maxInstancesOfKind {
+		if !found {
 			zboth.Fatal().Err(toError("max instances")).Msgf("A maximum of %d instances of %s are allowed. Please contact us if you hit this limit.", maxInstancesOfKind, nameProject)
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/cavaliergopher/grab/v3"
@@ -144,15 +145,89 @@ func execShell(command string) (result []byte, err error) {
 	return
 }
 
+// split a compose port mapping such as "4000:4000", "0.0.0.0:4100:4000" or "4100:4000/tcp"
+// into the part before the host port, the host port, and the part after it
+func splitPortMapping(mapping string) (prefix, hostPort, suffix string, err error) {
+	mapping = strings.TrimSpace(mapping)
+	base, protocol, hasProtocol := strings.Cut(mapping, "/")
+	lastColon := strings.LastIndex(base, ":")
+	if lastColon == -1 {
+		err = toError("port mapping %q does not publish a fixed host port (expected e.g. `4100:4000`)", mapping)
+		return
+	}
+	hostSide, containerPort := base[:lastColon], base[lastColon+1:]
+	if ip := strings.LastIndex(hostSide, ":"); ip != -1 {
+		prefix, hostPort = hostSide[:ip+1], hostSide[ip+1:]
+	} else {
+		hostPort = hostSide
+	}
+	if hostPort == "" {
+		err = toError("port mapping %q does not publish a fixed host port (expected e.g. `127.0.0.1:4100:4000`)", mapping)
+		return
+	}
+	if _, errConv := strconv.ParseUint(hostPort, 10, 16); errConv != nil {
+		err = toError("port mapping %q has an invalid host port %q", mapping, hostPort)
+		return
+	}
+	suffix = ":" + containerPort
+	if hasProtocol {
+		suffix += "/" + protocol
+	}
+	return
+}
+
+// get how the primary service of a compose file is published: the bind address prefix (e.g. "127.0.0.1:", or "")
+// and the host port of its first port mapping. `set` is false when the compose file has no ports entry at all.
+// Long-syntax entries (`- target: 4000`), which viper cannot read as strings, are an error rather than "not set".
+func publishedExposure(compose *viper.Viper) (bindPrefix, hostPort string, set bool, err error) {
+	key := joinKey("services", primaryService, "ports")
+	if set = compose.IsSet(key); !set {
+		return
+	}
+	mappings := compose.GetStringSlice(key)
+	if len(mappings) == 0 || strings.TrimSpace(mappings[0]) == "" {
+		err = toError("%s is not in the short form `[address:]host-port:container-port`", key)
+		return
+	}
+	bindPrefix, hostPort, _, err = splitPortMapping(mappings[0])
+	return
+}
+
 // to be called from the folder where file exists
+// replaces the host port of the first port mapping of the primary service, keeping the file's own bind address
 func changeExposedPort(filename string, newPort string) (err error) {
+	return rewriteFirstPortMapping(filename, func(prefix string) (string, string) { return prefix, newPort })
+}
+
+// replaces both the bind address and the host port of the first port mapping of the primary service,
+// so that an upgrade keeps the instance published exactly as before (e.g. only on 127.0.0.1)
+func carryOverExposure(filename, bindPrefix, hostPort string) (err error) {
+	return rewriteFirstPortMapping(filename, func(string) (string, string) { return bindPrefix, hostPort })
+}
+
+// rewrite the host side of the first port mapping of the primary service; `hostSide` gets the file's current bind
+// address prefix and returns the prefix and host port to write; the container port and protocol are kept
+func rewriteFirstPortMapping(filename string, hostSide func(prefix string) (newPrefix, newPort string)) (err error) {
 	if existingFile(filename) {
 		var content []byte
 		content, err = pathlib.NewPath(filename).ReadFile()
 		if err != nil {
 			return err
 		}
-		expression := toSprintf(".%s |= sub(\"%d:\", \"%s:\")", joinKey("services", "eln", "ports[0]"), 4000, newPort)
+		key := "." + joinKey("services", primaryService, "ports[0]")
+		var current string
+		if current, err = evaluateYamlExpression(string(content), key); err != nil {
+			return err
+		}
+		if current = strings.TrimSpace(current); current == "" || current == "null" {
+			return toError("no port mapping found at %s in %s", key, filename)
+		}
+		var prefix, suffix string
+		if prefix, _, suffix, err = splitPortMapping(current); err != nil {
+			return err
+		}
+		newPrefix, newPort := hostSide(prefix)
+		expression := toSprintf("%s = %q", key, newPrefix+newPort+suffix)
 		var output string
 		output, err = evaluateYamlExpression(string(content), expression)
 		if err == nil {
