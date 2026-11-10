@@ -18,7 +18,7 @@ func selfUpdate(version string) {
 	cliFileName := oldVersion.Name()
 	url := toSprintf("%s/releases/download/%s/%s", repositoryGH, version, cliFileName)
 	newVersion := downloadFile(url, workDir.Join(toSprintf("%s.new", cliFileName)).String())
-	if err := newVersion.Chmod(stat.Mode() | 100); err != nil { // make sure that it remains executable for the ErrUseLastResponse
+	if err := newVersion.Chmod(stat.Mode() | 0o100); err != nil { // make sure that it remains executable for the user
 		zboth.Warn().Err(err).Msgf("Could not grant executable permission to the downloaded file. Please do it yourself.")
 	}
 	if errOld := oldVersion.RenameStr(toSprintf("%s.old", cliFileName)); errOld == nil {

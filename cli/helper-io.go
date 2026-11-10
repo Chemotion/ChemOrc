@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/cavaliergopher/grab/v3"
@@ -144,7 +145,41 @@ func execShell(command string) (result []byte, err error) {
 	return
 }
 
+// split a compose port mapping such as "4000:4000", "0.0.0.0:4100:4000" or "4100:4000/tcp"
+// into the part before the host port, the host port, and the part after it
+func splitPortMapping(mapping string) (prefix, hostPort, suffix string, err error) {
+	mapping = strings.TrimSpace(mapping)
+	base, protocol, hasProtocol := strings.Cut(mapping, "/")
+	lastColon := strings.LastIndex(base, ":")
+	if lastColon == -1 {
+		err = toError("port mapping %q does not publish a host port", mapping)
+		return
+	}
+	hostSide, containerPort := base[:lastColon], base[lastColon+1:]
+	if ip := strings.LastIndex(hostSide, ":"); ip != -1 {
+		prefix, hostPort = hostSide[:ip+1], hostSide[ip+1:]
+	} else {
+		hostPort = hostSide
+	}
+	if _, errConv := strconv.ParseUint(hostPort, 10, 16); errConv != nil {
+		err = toError("port mapping %q has an invalid host port %q", mapping, hostPort)
+		return
+	}
+	suffix = ":" + containerPort
+	if hasProtocol {
+		suffix += "/" + protocol
+	}
+	return
+}
+
+// get the host port from a compose port mapping
+func hostPortOf(mapping string) (port string, err error) {
+	_, port, _, err = splitPortMapping(mapping)
+	return
+}
+
 // to be called from the folder where file exists
+// replaces the host port of the first port mapping of the primary service, whatever it currently is
 func changeExposedPort(filename string, newPort string) (err error) {
 	if existingFile(filename) {
 		var content []byte
@@ -152,7 +187,19 @@ func changeExposedPort(filename string, newPort string) (err error) {
 		if err != nil {
 			return err
 		}
-		expression := toSprintf(".%s |= sub(\"%d:\", \"%s:\")", joinKey("services", "eln", "ports[0]"), 4000, newPort)
+		key := "." + joinKey("services", primaryService, "ports[0]")
+		var current string
+		if current, err = evaluateYamlExpression(string(content), key); err != nil {
+			return err
+		}
+		if current = strings.TrimSpace(current); current == "" || current == "null" {
+			return toError("no port mapping found at %s in %s", key, filename)
+		}
+		var prefix, suffix string
+		if prefix, _, suffix, err = splitPortMapping(current); err != nil {
+			return err
+		}
+		expression := toSprintf("%s = %q", key, prefix+newPort+suffix)
 		var output string
 		output, err = evaluateYamlExpression(string(content), expression)
 		if err == nil {

@@ -51,8 +51,12 @@ func instanceUpgrade(givenName, use string) {
 	// get port from old compose
 	oldComposeFile := workDir.Join(instancesWord, name, chemotionComposeFilename)
 	oldCompose := parseAndPullCompose(oldComposeFile.String(), false)
-	if oldCompose.IsSet(joinKey("services", primaryService, "ports")) {
-		if err := changeExposedPort(newComposeFile.String(), oldCompose.GetStringSlice(joinKey("services", primaryService, "ports"))[0][:4]); err != nil {
+	if oldPorts := oldCompose.GetStringSlice(joinKey("services", primaryService, "ports")); len(oldPorts) > 0 {
+		oldPort, err := hostPortOf(oldPorts[0])
+		if err == nil {
+			err = changeExposedPort(newComposeFile.String(), oldPort)
+		}
+		if err != nil {
 			newComposeFile.Remove()
 			zboth.Fatal().Err(err).Msgf("Failed to update the port in downloaded compose file. This is necessary for future use. The file was removed.")
 		}
