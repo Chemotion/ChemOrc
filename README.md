@@ -152,9 +152,42 @@ As long as you installed an instance of Chemotion using this tool, the upgrade p
 
 ELN 4 is a major release. Read the [breaking changes of v4.0.0](https://github.com/ComPlat/chemotion_ELN/blob/v4.0.1/CHANGELOG.md#breaking-changes) before upgrading; in particular, collections now belong to one person and groups reach them through shares.
 
-- Upgrade with `all actions`, so that a backup is taken first.
-- The upgrade adds a `pdftext` service, which extracts the text of uploaded safety data sheets. It has no volumes and is only reachable from the ELN container.
-- The database image is built on a newer operating system. Before the database starts, the `dbupgrade` service rebuilds the indexes that depend on text sorting, and updates database extensions to the versions the new image ships. On a large database the first start therefore takes longer than usual; let it finish.
+**Before the downtime**
+
+1. Update chemCLI to its latest version (see [Updating the Tool](#updating-the-tool)); older versions do not offer ELN 4.
+2. Check the files in `shared/pullin/` (see [Configuration to check](#configuration-to-check-before-upgrading-to-eln-4) below).
+3. Make sure there is enough disk space: about 7 GB for the new images, room for the backup, and free space of about 1.5 times the size of your database for the index rebuild.
+4. The day before, run `./chemCLI` > `instance` > `upgrade` > `pull image only`. This downloads about 6.5 GB.
+
+**During the downtime**
+
+5. Run `./chemCLI` > `instance` > `upgrade` > `all actions`. It takes a backup, stops the instance and switches it to ELN 4. The switch itself takes under a minute; the backup takes as long as your data needs.
+6. Run `./chemCLI on`. **This first start takes much longer than usual and can look stuck. Do not interrupt it.** Two steps run one after the other before the ELN answers:
+
+   | Step | What happens | Small instance | About 450,000 samples |
+   |---|---|---|---|
+   | `dbupgrade`, before the database starts | Database extensions are updated, and the indexes that depend on text sorting are rebuilt: the new database image runs on a newer operating system, which sorts text differently | 1–2 min | 3–7 min |
+   | First ELN start | Database migrations, then compilation of the web assets | ~2 min | ~6 min from ELN 3.1, ~3 min from ELN 4.0.0 |
+   | **Total for `./chemCLI on`** | | **~5 min** | **~10–13 min** |
+
+**While you wait**
+
+- Follow the database step with `docker logs -f <name>-dbupgrade-1`. `<name>` is the `name` of the instance in `chem_cli.yml`, e.g. `main-ee5e5424`. It prints `[POST-UPGRADE] … reindexing` per database, then `[POST-UPGRADE] done`.
+- Then follow the ELN with `./chemCLI instance log`: `Migrations completed`, then the asset compilation.
+- Do not stop, restart or interrupt the instance while the indexes are rebuilt, and do not start it a second time in parallel. An interrupted rebuild is repaired on the next start, but costs a database recovery and a second run.
+- The ELN is given 20 minutes for its first start. If `./chemCLI on` still reports a failure, the start is usually just slow: wait until `./chemCLI instance ping` answers `200 OK`, then run `./chemCLI on` once more to start the remaining services.
+
+**After the upgrade**
+
+- If the structure editor looks empty for a user, reloading the page once fixes it.
+- Structure search works as before. Only after **restoring a backup** into an instance, rebuild its structure-search table with `chemotion rdkit-rebuild` in the instance console (`./chemCLI instance consoles`): about 3 minutes for 450,000 samples.
+
+**What the upgrade adds**
+
+- A `pdftext` service, which extracts the text of uploaded safety data sheets. It has no volumes and is only reachable from the ELN container.
+- A `dbupgrade` step that also runs when the database keeps its major version: it updates the database extensions and rebuilds the indexes when the operating system of the database image changes. It does nothing on later starts.
+
+##### Configuration to check before upgrading to ELN 4
 
 Files in the instance's `shared/pullin/` folder are copied over the ELN at every start: a `shared/pullin/config/<name>.yml` replaces the whole `config/<name>.yml` of the new version, and `shared/pullin/.env` is the ELN's `.env`. Before upgrading, check these:
 
@@ -173,6 +206,8 @@ Files in the instance's `shared/pullin/` folder are copied over the ELN at every
   - `SMTP_SSL_MODE` only accepts `none` or `peer`; any other value is now ignored, and the certificate check falls back to its default.
   - Without `SMTP_DOMAIN`, the ELN now introduces itself to the mail server with the host name of `PUBLIC_URL` (when it is a host name, not an IP address).
   - New: `SMTP_OPEN_TIMEOUT` and `SMTP_READ_TIMEOUT`, in seconds (default 10 and 30). Raise them if your mail relay is slow to answer.
+- **`PG_CARTRIDGE_VERSION`** (in `shared/pullin/.env` or the compose files): remove it if you set it. ELN 4 reads the version from the database itself; a value kept from ELN 3 (`4.4.0`) switches the database structure search off.
+- **`CRON_CONFIG_PC_LCSS`**: no longer used and can be removed; `CRON_CONFIG_PC_CID` schedules the PubChem lookups.
 
 > When upgrading from ELN version 1.3, please create a backup using chemCLI version 0.2.2 or above. This is because the data backup script provided inside the container is broken and this is fixed by chemCLI tool.
 
