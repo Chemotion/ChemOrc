@@ -12,8 +12,33 @@ import (
 	"github.com/spf13/viper"
 )
 
-// helper to determine the required compose file
-func getComposeAddressToUse(currentVersion, action string) (use string) {
+// oldest ELN version offered for new installations; older versions remain available as upgrade sources only
+const oldestInstallableELN = "3.0.0"
+
+// the versions to offer, from `orderVersions` (newest first): those newer than `currentVersion`, the current one
+// marked as such, and none older than `minimumVersion` (no lower limit if it is empty)
+func offeredVersions(currentVersion, minimumVersion string, orderVersions []string) (offered []string) {
+	now, _ := vercompare.NewVersion(currentVersion)
+	var minimum *vercompare.Version
+	if minimumVersion != "" {
+		minimum, _ = vercompare.NewVersion(minimumVersion)
+	}
+	for _, version := range orderVersions {
+		planned, _ := vercompare.NewVersion(version)
+		if minimum != nil && planned.LessThan(minimum) {
+			continue
+		}
+		if planned.GreaterThan(now) {
+			offered = append(offered, planned.String())
+		} else if planned.Equal(now) {
+			offered = append(offered, now.String()+" - current version")
+		}
+	}
+	return
+}
+
+// helper to determine the required compose file; `minimumVersion` limits the versions offered (empty: no limit)
+func getComposeAddressToUse(currentVersion, minimumVersion, action string) (use string) {
 	versions := make(map[string]string)
 	latestForThisCLIRelease := "4.0.1"
 	orderVersions := []string{latestForThisCLIRelease, "3.1.2", "3.0.0", "2.2.0", "2.1.1"} // descending order
@@ -23,16 +48,7 @@ func getComposeAddressToUse(currentVersion, action string) (use string) {
 	versions["3.0.0"] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/666a9f9bf1c0a985942c653972adfeaccbad1b52/payload/docker-compose.yml"
 	versions["2.2.0"] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/ece196c567e6505afee853f4acf7baedfdd0770e/payload/docker-compose.yml"
 	versions["2.1.1"] = "https://raw.githubusercontent.com/Chemotion/ChemOrc/8b8765e1279b9b4fbd2748245a3819abd67bae93/payload/docker-compose.yml"
-	validVersions := []string{}
-	for _, version := range orderVersions {
-		now, _ := vercompare.NewVersion(currentVersion)
-		planned, _ := vercompare.NewVersion(version)
-		if planned.GreaterThan(now) {
-			validVersions = append(validVersions, planned.String())
-		} else if planned.Equal(now) {
-			validVersions = append(validVersions, now.String()+" - current version")
-		}
-	}
+	validVersions := offeredVersions(currentVersion, minimumVersion, orderVersions)
 	if conf.IsSet(joinKey(stateWord, "latest_eln")) {
 		latest := conf.GetString(joinKey(stateWord, "latest_eln"))
 		if latest == latestForThisCLIRelease {
@@ -303,7 +319,7 @@ func processInstanceCreateCmd(cmd *cobra.Command, details map[string]string) (cr
 				details["givenName"] = getString("Please enter the name of the instance you want to create", []string{}, newInstanceValidate)
 			}
 			if askUse {
-				details["use"] = getComposeAddressToUse("1.3.1", "install")
+				details["use"] = getComposeAddressToUse("1.3.1", oldestInstallableELN, "install")
 			}
 			if askAddress {
 				if selectYesNo("Will this instance have its own web-address?", true) {

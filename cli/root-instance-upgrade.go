@@ -196,7 +196,7 @@ var upgradeInstanceRootCmd = &cobra.Command{
 		if !pull && isInteractive(false) {
 			_, currentVersion, _ := strings.Cut(conf.GetString(joinKey(instancesWord, currentInstance, "image")), "-")
 			if check {
-				use = getComposeAddressToUse(currentVersion, "upgrade to")
+				use = getComposeAddressToUse(currentVersion, "", "upgrade to") // upgrades: every newer version, no lower limit
 			}
 			switch selectOpt([]string{"all actions: pull image, backup and upgrade", "preparation: pull image and backup", "upgrade only (if already prepared)", "pull image only", coloredExit}, "What do you want to do") {
 			case "all actions: pull image, backup and upgrade":
