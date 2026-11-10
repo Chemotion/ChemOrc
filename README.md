@@ -154,7 +154,7 @@ ELN 4 is a major release. Read the [breaking changes of v4.0.0](https://github.c
 
 **Before the downtime**
 
-1. Update chemCLI to its latest version (see [Updating the Tool](#updating-the-tool)); older versions do not offer ELN 4.
+1. Update chemCLI to its latest version (see [Updating the Tool](#updating-the-tool)) before upgrading. Older versions can also install ELN 4 (in scripted mode, `-q`, they always take the newest release), but they don't set up its new `pdftext` service correctly.
 2. Check the files in `shared/pullin/` (see [Configuration to check](#configuration-to-check-before-upgrading-to-eln-4) below).
 3. Make sure there is enough disk space: about 7 GB for the new images, room for the backup, and free space of about 1.5 times the size of your database for the index rebuild.
 4. The day before, run `./chemCLI` > `instance` > `upgrade` > `pull image only`. This downloads about 6.5 GB.
