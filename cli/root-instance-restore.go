@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"path/filepath"
+
 	"github.com/spf13/cobra"
 )
 
@@ -26,6 +28,14 @@ var restoreInstanceRootCmd = &cobra.Command{
 			}
 			if data == "" {
 				data = getString("Please enter the absolute path of your data backup file (e.g. /path/to/backup.data.tar.gz)", []string{}, fileValidate)
+			}
+		}
+		// the paths were checked from the current folder, but `docker cp` runs from the instance's folder: make them absolute
+		for _, path := range []*string{&db, &data} {
+			if abs, err := filepath.Abs(*path); err == nil {
+				*path = abs
+			} else {
+				zboth.Fatal().Err(err).Msgf("Cannot determine the absolute path of %s.", *path)
 			}
 		}
 		details := make(map[string]string)
@@ -71,8 +81,19 @@ var restoreInstanceRootCmd = &cobra.Command{
 						}
 					}
 				} else {
-					// no prompt in quiet mode: keep the instance rather than delete anything unasked
-					zboth.Warn().Msgf("The instance called %s was kept. Remove it with `%s instance %s -n %s --force -q` if it is not needed.", details["givenName"], commandForCLI, removeInstanceRootCmd.Use, details["givenName"])
+					// no prompt in quiet mode: keep the instance rather than delete anything unasked,
+					// and point to the command that can actually remove it (`instance remove` refuses the only and the selected instance)
+					givenName := details["givenName"]
+					var how string
+					switch {
+					case len(allInstances()) == 1:
+						how = toSprintf("As it is the only instance, remove it with `%s %s %s` (interactive only; this removes the whole installation)", commandForCLI, advancedRootCmd.Use, uninstallAdvancedRootCmd.Use)
+					case givenName == currentInstance:
+						how = toSprintf("As it is the selected instance, first select another one with `%s instance %s -n <name>`, then remove it with `%s instance %s -n %s --force -q`", commandForCLI, switchInstanceRootCmd.Use, commandForCLI, removeInstanceRootCmd.Use, givenName)
+					default:
+						how = toSprintf("Remove it with `%s instance %s -n %s --force -q`", commandForCLI, removeInstanceRootCmd.Use, givenName)
+					}
+					zboth.Warn().Msgf("The instance called %s was kept. %s if it is not needed.", givenName, how)
 				}
 			}
 		}
