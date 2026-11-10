@@ -91,7 +91,6 @@ services:
       - 4000:4000
     networks:
       - chemotion
-      - pdftext
 
   ketchersvc:
     image: complat/chemotion:ketchersvc-4.0.1
@@ -115,7 +114,7 @@ services:
       - chemotion
 
   # Extracts the text of uploaded PDFs (safety data sheets) for the ELN.
-  # The PDF travels in the request: no volumes, no secrets, no outside access, bounded resources.
+  # The PDF travels in the request: no volumes, no secrets, bounded resources.
   pdftext:
     image: complat/chemotion:pdftext-4.0.1
     restart: unless-stopped
@@ -130,7 +129,7 @@ services:
     cpus: 2
     pids_limit: 64
     networks:
-      - pdftext
+      - chemotion
 
   indigo_service:
     hostname: indigo_service
@@ -156,5 +155,3 @@ volumes:
 
 networks:
   chemotion:
-  pdftext:
-    internal: true

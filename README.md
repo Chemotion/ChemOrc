@@ -184,7 +184,7 @@ ELN 4 is a major release. Read the [breaking changes of v4.0.0](https://github.c
 
 **What the upgrade adds**
 
-- A `pdftext` service, which extracts the text of uploaded safety data sheets. It has no volumes and is only reachable from the ELN container.
+- A `pdftext` service, which extracts the text of uploaded safety data sheets. It has no volumes and runs on the same network as the other services.
 - A `dbupgrade` step that also runs when the database keeps its major version: it updates the database extensions and rebuilds the indexes when the operating system of the database image changes. It does nothing on later starts.
 
 ##### Configuration to check before upgrading to ELN 4
