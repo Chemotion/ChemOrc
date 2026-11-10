@@ -71,7 +71,7 @@ var backupInstanceRootCmd = &cobra.Command{
 			}
 			instanceBackup(currentInstance, portion)
 			if elementInSlice(status, &[]string{"Exited", "Created"}) != -1 { // i.e. status == "Exited" || status == "Created"
-				_, _, _ = gotoFolder(currentInstance), callVirtualizer(composeCall+"stop"), gotoFolder("work.dir")
+				_, _, _ = gotoFolder(currentInstance), callVirtualizer(composeCall+composeStop), gotoFolder("work.dir")
 			}
 		} else {
 			zboth.Debug().Msgf("Backup operation cancelled.")

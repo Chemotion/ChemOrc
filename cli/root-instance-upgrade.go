@@ -9,6 +9,32 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// The labels for a service or volume in the extended compose file: the existing ones, with the CLI's project
+// label set to `name` (replacing an older value of it). Labels added by an admin, e.g. for a reverse proxy, are kept.
+// Only the list form (`- key=value`) can be edited; a map is reported with ok == false and must be left alone,
+// because viper reads the dots in its keys as nesting.
+func withProjectLabel(existing any, name string) (labels []string, ok bool) {
+	const key = "net.chemotion.cli.project"
+	var current []string
+	switch l := existing.(type) {
+	case nil:
+	case []string:
+		current = l
+	case []any:
+		for _, item := range l {
+			current = append(current, toSprintf("%v", item))
+		}
+	default:
+		return nil, false
+	}
+	for _, label := range current {
+		if label != key && !strings.HasPrefix(label, key+"=") {
+			labels = append(labels, label)
+		}
+	}
+	return append(labels, key+"="+name), true
+}
+
 func upgradeRequired() (toUpgrade []string) {
 	if conf.IsSet(joinKey(stateWord, "latest_eln")) {
 		if latestVersion, err := vercompare.NewVersion(conf.GetString(joinKey(stateWord, "latest_eln"))); err == nil {
@@ -51,10 +77,14 @@ func instanceUpgrade(givenName, use string) {
 	// get port from old compose
 	oldComposeFile := workDir.Join(instancesWord, name, chemotionComposeFilename)
 	oldCompose := parseAndPullCompose(oldComposeFile.String(), false)
-	if oldCompose.IsSet(joinKey("services", primaryService, "ports")) {
-		if err := changeExposedPort(newComposeFile.String(), oldCompose.GetStringSlice(joinKey("services", primaryService, "ports"))[0][:4]); err != nil {
+	// carry the bind address and host port over, so the instance stays published exactly as before
+	if bindPrefix, hostPort, set, err := publishedExposure(&oldCompose); set {
+		if err == nil {
+			err = carryOverExposure(newComposeFile.String(), bindPrefix, hostPort)
+		}
+		if err != nil {
 			newComposeFile.Remove()
-			zboth.Fatal().Err(err).Msgf("Failed to update the port in downloaded compose file. This is necessary for future use. The file was removed.")
+			zboth.Fatal().Err(err).Msgf("Cannot carry the published port of %s over to the new compose file; nothing was changed. Write %s in %s as e.g. `4100:4000` or `127.0.0.1:4100:4000`, then try again.", givenName, joinKey("services", primaryService, "ports"), oldComposeFile.String())
 		}
 	} else {
 		zboth.Warn().Msgf("The entry %s was not found in the existing %s, remember to configure the new file as per your settings.", joinKey("services", primaryService, "ports"), chemotionComposeFilename)
@@ -81,7 +111,7 @@ func instanceUpgrade(givenName, use string) {
 	var err error = nil
 	var msg string
 	// shutdown existing instance's docker
-	if _, success, _ = gotoFolder(givenName), callVirtualizer(composeCall+"down --remove-orphans"), gotoFolder("work.dir"); !success {
+	if _, success, _ = gotoFolder(givenName), callVirtualizer(composeCall+composeDown+" --remove-orphans"), gotoFolder("work.dir"); !success {
 		err = toError("compose down failed")
 		msg = toSprintf("Failed to stop %s. Check log. ABORT!", givenName)
 	}
@@ -104,59 +134,68 @@ func instanceUpgrade(givenName, use string) {
 				// update image in extended compose
 				// remove extra entry from extended compose
 				// rewrite labels
-				if _, success, _ = gotoFolder(givenName), callVirtualizer("pull mikefarah/yq"), gotoFolder("work.dir"); success {
-					var result []byte
-					gotoFolder(givenName)
-					extendedCompose := parseAndPullCompose(cliComposeFilename, false)
-					if extendedCompose.IsSet("networks.chemotion.labels") {
-						labels := extendedCompose.GetStringMapString("networks.chemotion.labels")
-						if strings.HasPrefix(labels["net.chemotion.cli.project"], givenName) {
-							if result, err = execShell(toSprintf("cat %s | %s run -i --rm mikefarah/yq 'del(.networks.*.labels)'", cliComposeFilename, virtualizer)); err == nil {
-								yamlFile := pathlib.NewPath(cliComposeFilename)
-								err = yamlFile.WriteFile(result)
-								if err == nil {
+				gotoFolder(givenName)
+				extendedCompose := parseAndPullCompose(cliComposeFilename, false)
+				if extendedCompose.IsSet("networks.chemotion.labels") {
+					labels := extendedCompose.GetStringMapString("networks.chemotion.labels")
+					if strings.HasPrefix(labels["net.chemotion.cli.project"], givenName) {
+						var read []byte
+						if read, err = pathlib.NewPath(cliComposeFilename).ReadFile(); err == nil {
+							var output string
+							if output, err = evaluateYamlExpression(string(read), "del(.networks.*.labels)"); err == nil {
+								if err = pathlib.NewPath(cliComposeFilename).WriteFile([]byte(output)); err == nil {
 									extendedCompose = parseAndPullCompose(cliComposeFilename, false)
 								}
 							}
 						}
 					}
-					extendedCompose.Set(joinKey("services", "executor", "image"), newImage)
-					otpSet := false
-					envVars := extendedCompose.GetStringSlice((joinKey("services", primaryService, "environment")))
-					for _, envVar := range envVars {
-						if strings.HasPrefix(envVar, "OTP_SECRET_KEY") {
-							otpSet = true
-							break
+				}
+				extendedCompose.Set(joinKey("services", "executor", "image"), newImage)
+				otpSet := false
+				envVars := extendedCompose.GetStringSlice((joinKey("services", primaryService, "environment")))
+				for _, envVar := range envVars {
+					if strings.HasPrefix(envVar, "OTP_SECRET_KEY") {
+						otpSet = true
+						break
+					}
+				}
+				if !otpSet {
+					otp := getNewOTP()
+					for _, service := range []string{primaryService, "worker", "executor"} {
+						envVars := extendedCompose.GetStringSlice((joinKey("services", service, "environment")))
+						extendedCompose.Set(joinKey("services", service, "environment"), append(envVars, "OTP_SECRET_KEY="+otp))
+					}
+				}
+				// label every service of the new compose file, including services it adds,
+				// so that status and stats find their containers; volumes only need it
+				// for instances whose extended compose still carries the network entry
+				sections := []string{"services"}
+				if extendedCompose.IsSet(joinKey("networks", "chemotion")) {
+					sections = append(sections, "volumes")
+				}
+				compose := parseAndPullCompose(chemotionComposeFilename, false)
+				for _, section := range sections {
+					subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services and volumes
+					for _, k := range subheadings {
+						key := joinKey(section, k, "labels")
+						if labels, ok := withProjectLabel(extendedCompose.Get(key), name); ok {
+							extendedCompose.Set(key, labels)
+						} else {
+							zboth.Warn().Msgf("The labels of %s in %s are not a list; add `net.chemotion.cli.project=%s` to them yourself, so that %s finds this container.", key, cliComposeFilename, name, nameCLI)
 						}
 					}
-					if !otpSet {
-						otp := getNewOTP()
-						for _, service := range []string{primaryService, "worker", "executor"} {
-							envVars := extendedCompose.GetStringSlice((joinKey("services", service, "environment")))
-							extendedCompose.Set(joinKey("services", service, "environment"), append(envVars, "OTP_SECRET_KEY="+otp))
-						}
-					}
-					if extendedCompose.IsSet(joinKey("networks", "chemotion")) {
-						// reset labels on services and volumes for future identification
-						sections := []string{"services", "volumes"}
-						compose := parseAndPullCompose(chemotionComposeFilename, false)
-						for _, section := range sections {
-							subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services and volumes
-							for _, k := range subheadings {
-								extendedCompose.Set(joinKey(section, k, "labels"), []string{toSprintf("net.chemotion.cli.project=%s", name)})
-							}
-						}
-					}
-					err = extendedCompose.WriteConfigAs(cliComposeFilename)
-					gotoFolder("work.dir")
-					if err != nil {
-						zboth.Warn().Err(err).Msgf("Failed to correct the file %s for instance %s.", cliComposeFilename, givenName)
-					}
-				} else {
-					zboth.Warn().Err(toError("failed to pull `yq`")).Msgf("Failed to pull `yq` image.")
+				}
+				err = extendedCompose.WriteConfigAs(cliComposeFilename)
+				gotoFolder("work.dir")
+				if err != nil {
+					zboth.Warn().Err(err).Msgf("Failed to correct the file %s for instance %s.", cliComposeFilename, givenName)
 				}
 			}() // to be removed in version 3
 			zboth.Info().Msgf("Instance upgraded successfully!")
+			// ask if user wants to start the instance right away
+			if isInteractive(false) && selectYesNo("Do you want to start the instance now?", true) {
+				instanceStart(givenName)
+			}
 		} else {
 			err = toError("%s failed", commandStr)
 			msg = toSprintf("Failed to initialize upgraded %s. Check log. ABORT!", givenName)
@@ -188,7 +227,7 @@ var upgradeInstanceRootCmd = &cobra.Command{
 		if !pull && isInteractive(false) {
 			_, currentVersion, _ := strings.Cut(conf.GetString(joinKey(instancesWord, currentInstance, "image")), "-")
 			if check {
-				use = getComposeAddressToUse(currentVersion, "upgrade to")
+				use = getComposeAddressToUse(currentVersion, "", "upgrade to") // upgrades: every newer version, no lower limit
 			}
 			switch selectOpt([]string{"all actions: pull image, backup and upgrade", "preparation: pull image and backup", "upgrade only (if already prepared)", "pull image only", coloredExit}, "What do you want to do") {
 			case "all actions: pull image, backup and upgrade":

@@ -1,45 +1,48 @@
 package cli
 
 import (
+	"context"
+	"os"
 	"strings"
 	"time"
 
-	"github.com/schollz/progressbar/v3"
+	spinner "charm.land/huh/v2/spinner"
+	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
 )
 
-// show (and then remove) a progress bar that waits for an instance to start
-func waitStartSpinner(waitForSeconds int, givenName string) (waitTime int) {
-	bar := progressbar.NewOptions(
-		-1,
-		progressbar.OptionSetDescription(toSprintf("Starting %s...", givenName)),
-		progressbar.OptionSetPredictTime(false),
-		progressbar.OptionClearOnFinish(),
-		progressbar.OptionSetRenderBlankState(true),
-		progressbar.OptionSetVisibility(true),
-		progressbar.OptionSpinnerType(51),
-	)
-	startTime := time.Now()
+// hasTerminal reports whether both stdin and stdout are terminals, which the spinner needs
+func hasTerminal() bool {
+	return term.IsTerminal(os.Stdin.Fd()) && term.IsTerminal(os.Stdout.Fd())
+}
+
+func isInstancePingable(ctx context.Context) (err error) {
+	givenName := ctx.Value("instance").(string)
+	var response string
 	for {
-		time.Sleep(1 * time.Second)
-		response := instancePing(givenName)
-		timeSince := int(time.Since(startTime).Seconds())
+		response = instancePing(givenName) // dynamically checks the started instance name
 		if response == "200 OK" {
-			waitTime = timeSince
-			bar.Finish()
+			err = nil
 			return
 		}
 		if strings.Contains(response, "x509") {
-			waitTime = -1
-			bar.Finish()
-			zboth.Warn().Err(toError(response)).Msgf("Ping failed because: `certificate signed by unknown authority`.")
+			err = toError("ping failed because: certificate signed by unknown authority")
 			return
 		}
-		bar.Add(timeSince)
-		if timeSince >= waitForSeconds {
-			waitTime = -1
-			bar.Finish()
+		// Check for permanent network or URL resolution errors
+		if strings.Contains(response, "unsupported protocol scheme") ||
+			strings.Contains(response, "no such host") ||
+			strings.Contains(response, "invalid port") ||
+			strings.Contains(response, "invalid control character") {
+			err = toError("ping failed with permanent error: %s", response)
 			return
+		}
+		select {
+		case <-ctx.Done():
+			// keep the last ping response: it says why the instance did not answer (e.g. connection refused)
+			err = toError("%w (last response: %s)", ctx.Err(), response)
+			return
+		case <-time.After(1 * time.Second):
 		}
 	}
 }
@@ -52,24 +55,36 @@ func instanceStart(givenName string) {
 		if errCreateFolder := modifyContainer(givenName, "mkdir -p", "shared/pullin", ""); !errCreateFolder {
 			zboth.Fatal().Err(toError("create shared/pullin failed")).Msgf("Failed to create folder inside the respective container.")
 		}
-		if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+"up -d"), gotoFolder("work.dir"); success {
-			waitFor := 120 // in seconds
-			if status == "Exited" {
-				waitFor = 60 // in seconds
-			}
-			zboth.Info().Msgf("Pinging instance called %s.", givenName) // because user sees the spinner
-			waitTime := waitStartSpinner(waitFor, givenName)
-			if waitTime >= 0 {
-				var timeTaken string
-				if waitTime > 0 {
-					timeTaken = toSprintf(" in %d seconds", waitTime)
-				}
-				zboth.Info().Msgf("Successfully started instance called %s%s at %s.", givenName, timeTaken, conf.GetString(joinKey(instancesWord, givenName, "accessAddress")))
+		waitFor := 120 // in seconds
+		if status == "Exited" {
+			waitFor = 60 // in seconds
+		}
+		startTime := time.Now()
+		if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+"up -d"), gotoFolder("work.dir"); !success {
+			zboth.Fatal().Msgf("Failed to start instance called %s.", givenName)
+		}
+		// wait for instance to be pingable
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, "instance", givenName)
+		ctx, cancel := context.WithTimeout(ctx, time.Duration(waitFor)*time.Second)
+		defer cancel()
+		var err error
+		if hasTerminal() {
+			err = spinner.New().Title(toSprintf(" Pinging instance called %s.", givenName)).ActionWithErr(isInstancePingable).Context(ctx).Type(spinner.Points).Run()
+		} else {
+			// without a terminal (scripts, cron) the spinner cannot run: ping without it
+			zboth.Info().Msgf("Pinging instance called %s.", givenName)
+			err = isInstancePingable(ctx)
+		}
+		waitTime := int(time.Since(startTime).Seconds())
+		if err != nil {
+			if err.Error() == "ping failed because: certificate signed by unknown authority" {
+				zboth.Warn().Msgf("Ping failed because of an SSL error. This might be because the instance is using a self-signed certificate. Please check if you can access the instance at %s. If you can, then you can ignore this warning.", conf.GetString(joinKey(instancesWord, givenName, "accessAddress")))
 			} else {
-				zboth.Fatal().Err(toError("ping timeout after %d seconds", waitTime)).Msgf("Failed to ping the instance called %s. Try accessing it yourself. Also, please check logs using `%s instance %s`.", givenName, commandForCLI, logInstanceRootCmd.Use)
+				zboth.Fatal().Err(toError("ping failed after %d seconds: %s", waitTime, err.Error())).Msgf("Failed to ping the instance called %s. Try accessing it yourself. Also, please check logs using `%s instance %s`.", givenName, commandForCLI, logInstanceRootCmd.Use)
 			}
 		} else {
-			zboth.Fatal().Msgf("Failed to start instance called %s.", givenName)
+			zboth.Info().Msgf("Successfully started instance called %s in %d seconds at %s.", givenName, waitTime, conf.GetString(joinKey(instancesWord, givenName, "accessAddress")))
 		}
 	}
 }
@@ -77,7 +92,7 @@ func instanceStart(givenName string) {
 func instanceStop(givenName string) {
 	status := instanceStatus(givenName)
 	if elementInSlice(status, &[]string{"Exited", "Created"}) == -1 {
-		if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+"stop"), gotoFolder("work.dir"); success {
+		if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+composeStop), gotoFolder("work.dir"); success {
 			zboth.Info().Msgf("Successfully stopped instance called %s.", givenName)
 		} else {
 			zboth.Fatal().Msgf("Failed to stop instance called %s.", givenName)

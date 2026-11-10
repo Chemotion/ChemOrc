@@ -34,7 +34,7 @@ func instanceRemove(givenName string, force bool) (err error) {
 			return
 		}
 	} else {
-		err = toError("failed to remove the `shared` associated with instance %s; you may require admin priviledges to remove it", givenName)
+		err = toError("failed to remove the `shared` associated with instance %s; you may require admin privileges to remove it", givenName)
 		return
 	}
 	// delete entry in config

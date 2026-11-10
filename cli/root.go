@@ -34,6 +34,7 @@ package cli
 import (
 	"os"
 	"strings"
+	"testing"
 
 	"github.com/chigopher/pathlib"
 	color "github.com/mitchellh/colorstring"
@@ -63,12 +64,19 @@ const (
 	backupshURL              = repositoryGH + "/releases/latest/download/backup.sh"
 	rollNum                  = 1 // the default index number assigned by virtualizer to every container
 	primaryService           = "eln"
+	// Shutdown timeout for every stop or down that keeps the data. Given on the command line because the stop
+	// before an upgrade still runs with the old compose file, which may not set the db's stop_grace_period:
+	// a large database needs this long for its shutdown checkpoint; killed earlier, dbupgrade skips its
+	// maintenance on the next start. A timeout is a maximum: services that stop faster are not held up.
+	stopTimeoutSeconds = "120"
+	composeStop        = "stop --timeout " + stopTimeoutSeconds
+	composeDown        = "down --timeout " + stopTimeoutSeconds
 )
 
 // configuration and logging
 var (
 	// version number, here to allow override
-	versionCLI = "0.2.30"
+	versionCLI = "0.2.31"
 	// current shell
 	shell string
 	// currently selected instance
@@ -89,7 +97,9 @@ var (
 	// to have exit where required
 	coloredExit = color.Color("[red]exit")
 	// patches to apply
-	patches = []string{"fix-173-ketcher"}
+	patches = []string{}
+	// patches that are deprecated (used to be applied in older versions)
+	deprecatedPatches = []string{"fix-173-ketcher"}
 )
 
 // data type that maps a string to corresponding cobra command
@@ -174,9 +184,19 @@ func Execute() {
 }
 
 func init() {
-	initLog()                               // initialize logging
+	// under `go test`, skip the start-up that needs a real run: initLog would write chem_cli.log next to the tests
+	// and read the test binary's own flags (e.g. -test.testlogfile=/tmp/go-build…) as -d/-q, and determineShell
+	// would abort without $SHELL; the loggers stay silent instead
+	underTest := testing.Testing()
+	if underTest {
+		zlog, zboth = zerolog.Nop(), zerolog.Nop()
+	} else {
+		initLog() // initialize logging
+	}
 	initFlags()                             // initialize flags
-	cobra.OnInitialize(initConf, bindFlags) // intitialize configuration // bind the flag
+	cobra.OnInitialize(initConf, bindFlags) // initialize configuration // bind the flag
 	rootCmd.SetVersionTemplate(toSprintf("%s version %s\n", nameCLI, versionCLI))
-	shell = determineShell()
+	if !underTest {
+		shell = determineShell()
+	}
 }

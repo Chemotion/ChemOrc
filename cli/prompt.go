@@ -111,9 +111,11 @@ func addressValidate(input string) (err error) {
 	return
 }
 
+// validate a path to an existing file; spaces are allowed because they are valid in file paths
 func fileValidate(input string) (err error) {
-	err = textValidate(input)
-	if !existingFile(input) {
+	if strings.TrimSpace(input) == "" {
+		err = toError("can not accept empty value")
+	} else if !existingFile(input) {
 		err = toError("this file does not exist")
 	}
 	return

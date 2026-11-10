@@ -34,7 +34,7 @@ func confirmVirtualizer(minimum string) {
 				}
 				zboth.Debug().Msgf("Running version %s of %s", version.String(), virtualizer)
 			} else {
-				zboth.Fatal().Err(err).Msgf("%s is out of date. Please update it before proceeding.", virtualizer)
+				zboth.Fatal().Err(errCompare).Msgf("%s is out of date. Please update it before proceeding.", virtualizer)
 			}
 		} else {
 			zboth.Fatal().Err(toError("failed to convert version string")).Msgf("Failed to understand the following output upon executing `%s --version`: %s", virtualizer, ver)
@@ -65,14 +65,19 @@ func modifyContainer(givenName, command, source, target string) (success bool) {
 }
 
 // call to virtualizer (this must not end in fatal error, i.e. must return `var success bool`)
+// args are split on whitespace; use callVirtualizerArgs when an argument may itself contain spaces (e.g. a file path)
 func callVirtualizer(args string) (success bool) {
-	if strings.Contains(args, "busybox") || strings.Contains(args, "mikefarah/yq") {
-		zboth.Debug().Msgf("%s will now start the execution with command `%s %s` sent to shell.", nameProject, virtualizer, args)
+	return callVirtualizerArgs(strings.Fields(args)...)
+}
+
+// call to virtualizer with each argument passed as-is (this must not end in fatal error, i.e. must return `var success bool`)
+func callVirtualizerArgs(commandArgs ...string) (success bool) {
+	display := strings.Join(commandArgs, " ")
+	if elementInSlice("busybox", &commandArgs) != -1 {
+		zboth.Debug().Msgf("%s will now start the execution with command `%s %s` sent to shell.", nameProject, virtualizer, display)
 	} else {
-		zboth.Info().Msgf("%s will now start the execution with command `%s %s` sent to shell.", nameProject, virtualizer, args)
+		zboth.Info().Msgf("%s will now start the execution with command `%s %s` sent to shell.", nameProject, virtualizer, display)
 	}
-	args = strings.TrimSpace(args)
-	commandArgs := strings.Split(args, " ")
 	commandExec := exec.Command(virtualizer, commandArgs...)
 	commandExec.Stdin, commandExec.Stdout, commandExec.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := commandExec.Run(); err == nil {

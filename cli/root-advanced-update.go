@@ -14,11 +14,14 @@ import (
 // update the tool itself
 func selfUpdate(version string) {
 	oldVersion := pathlib.NewPath(commandForCLI)
-	stat, _ := oldVersion.Stat()
+	stat, errStat := oldVersion.Stat()
+	if errStat != nil { // e.g. when called through $PATH: os.Args[0] is then not a path to the file
+		zboth.Fatal().Err(errStat).Msgf("Cannot find the running executable at %s. Run %s from its own folder (e.g. as ./%s) to update it.", commandForCLI, nameCLI, nameCLI)
+	}
 	cliFileName := oldVersion.Name()
 	url := toSprintf("%s/releases/download/%s/%s", repositoryGH, version, cliFileName)
 	newVersion := downloadFile(url, workDir.Join(toSprintf("%s.new", cliFileName)).String())
-	if err := newVersion.Chmod(stat.Mode() | 100); err != nil { // make sure that it remains executable for the ErrUseLastResponse
+	if err := newVersion.Chmod(stat.Mode() | 0o100); err != nil { // make sure that it remains executable for the user
 		zboth.Warn().Err(err).Msgf("Could not grant executable permission to the downloaded file. Please do it yourself.")
 	}
 	if errOld := oldVersion.RenameStr(toSprintf("%s.old", cliFileName)); errOld == nil {
@@ -43,9 +46,11 @@ func selfUpdate(version string) {
 
 // get the version string of the latest release
 func getLatestVersion() (version string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	client := api_gh.NewClient(nil)
 	location := strings.Split(repositoryGH, "/")
-	if release, _, err := client.Repositories.GetLatestRelease(context.Background(), location[len(location)-2], location[len(location)-1]); err == nil {
+	if release, _, err := client.Repositories.GetLatestRelease(ctx, location[len(location)-2], location[len(location)-1]); err == nil {
 		return *release.TagName
 	} else {
 		return versionCLI
@@ -68,7 +73,7 @@ func autoCheckUpdate() (required bool) {
 	newVer, _ := vercompare.NewVersion(getLatestVersion())
 	required = newVer.GreaterThan(existingVer)
 	conf.Set(timeKey, time.Now())
-	zboth.Debug().Msgf("The lastest version of ChemCLI is %s while this current version is %s.", newVer.String(), versionCLI)
+	zboth.Debug().Msgf("The latest version of ChemCLI is %s while this current version is %s.", newVer.String(), versionCLI)
 	if existingFile(conf.ConfigFileUsed()) {
 		if required && time.Since(lastCheckedOn).Hours() > 24 { // even though new CLI version is always checked (via GH API), a new version of ELN is determined (via downloading d-c.yml file) only once every 24 hours
 			latestCompose := parseAndPullCompose(composeURL, false)

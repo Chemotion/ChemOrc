@@ -1,13 +1,17 @@
+# Chemotion ELN v4.0.1
 services:
   dbupgrade:
-    image: ptrxyz/chemotion:dbupgrade-3.1.2
+    image: complat/chemotion:dbupgrade-4.0.1
     volumes:
       - chemotion_db:/var/lib/postgresql/data/
     restart: "no"
 
   db:
-    image: ptrxyz/chemotion:db-3.1.2
+    image: complat/chemotion:db-4.0.1
     restart: unless-stopped
+    # The 10 s default ends in SIGKILL when a large database is still writing its shutdown
+    # checkpoint; dbupgrade then skips its maintenance on the next start.
+    stop_grace_period: 2m
     hostname: db
     depends_on:
       dbupgrade:
@@ -21,7 +25,7 @@ services:
       - chemotion
 
   msconvert:
-    image: ptrxyz/chemotion:msconvert-3.1.2
+    image: complat/chemotion:msconvert-4.0.1
     restart: unless-stopped
     hostname: msconvert
     volumes:
@@ -30,7 +34,7 @@ services:
       - chemotion
 
   spectra:
-    image: ptrxyz/chemotion:spectra-3.1.2
+    image: complat/chemotion:spectra-4.0.1
     restart: unless-stopped
     hostname: spectra
     volumes:
@@ -41,7 +45,7 @@ services:
       - chemotion
 
   worker:
-    image: ptrxyz/chemotion:eln-3.1.2
+    image: complat/chemotion:eln-4.0.1
     restart: unless-stopped
     environment:
       - CONFIG_ROLE=worker
@@ -59,13 +63,22 @@ services:
       - chemotion
 
   eln:
-    image: ptrxyz/chemotion:eln-3.1.2
+    image: complat/chemotion:eln-4.0.1
     restart: unless-stopped
+    # The first start after an upgrade migrates the database and compiles the assets before the
+    # ELN answers (several minutes on a large instance). Give it 20 minutes before a failing
+    # check counts, so the services waiting for eln (ketchersvc) do not fail to start.
+    healthcheck:
+      start_period: 20m
     environment:
       - CONFIG_ROLE=eln
       - SECRET_KEY_BASE=pleasechangeme
       - RUBYOPT=-W0
       - OTP_SECRET_KEY=1pleasechangeme2pleasechangeme3
+      # Origins allowed to drive the self-hosted NMRium wrapper. Defaults to the
+      # instance's PUBLIC_URL; set it (here or in shared/pullin/.env) only when the ELN
+      # is reached under more than one hostname.
+      # - NMRIUM_ALLOWED_ORIGINS=https://eln.example.org https://eln.alias.example.org
     depends_on:
       - db
       - spectra
@@ -80,7 +93,7 @@ services:
       - chemotion
 
   ketchersvc:
-    image: ptrxyz/chemotion:ketchersvc-3.1.2
+    image: complat/chemotion:ketchersvc-4.0.1
     restart: unless-stopped
     init: true
     depends_on:
@@ -90,7 +103,7 @@ services:
       - chemotion
 
   converter:
-    image: ptrxyz/chemotion:converter-3.1.2
+    image: complat/chemotion:converter-4.0.1
     restart: unless-stopped
     environment:
       - SECRET_KEY=imsupersecretandwanttobechanged
@@ -100,9 +113,28 @@ services:
     networks:
       - chemotion
 
+  # Extracts the text of uploaded PDFs (safety data sheets) for the ELN.
+  # The PDF travels in the request: no volumes, no secrets, bounded resources.
+  pdftext:
+    image: complat/chemotion:pdftext-4.0.1
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
+    # Docker refuses a CPU limit above the host's CPU count; 1 also fits single-CPU hosts.
+    cpus: 1
+    pids_limit: 64
+    networks:
+      - chemotion
+
   indigo_service:
     hostname: indigo_service
-    image: epmlsop/indigo-service:1.35.0-rc.2
+    image: epmlsop/indigo-service:1.46.0
     restart: unless-stopped
     environment:
       - PYTHONPATH=/srv/indigo-python
