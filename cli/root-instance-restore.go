@@ -71,7 +71,7 @@ var restoreInstanceRootCmd = &cobra.Command{
 				zboth.Fatal().Msgf("Failed to create an instance to restore the files into!")
 			}
 			if success {
-				_, _, _ = gotoFolder(details["givenName"]), callVirtualizer(composeCall+"stop"), gotoFolder("work.dir")
+				_, _, _ = gotoFolder(details["givenName"]), callVirtualizer(composeCall+composeStop), gotoFolder("work.dir")
 			} else {
 				zboth.Warn().Msgf("Restoration process failed. Check LOG!")
 				if isInteractive(false) {

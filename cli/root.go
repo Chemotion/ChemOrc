@@ -64,6 +64,13 @@ const (
 	backupshURL              = repositoryGH + "/releases/latest/download/backup.sh"
 	rollNum                  = 1 // the default index number assigned by virtualizer to every container
 	primaryService           = "eln"
+	// Shutdown timeout for every stop or down that keeps the data. Given on the command line because the stop
+	// before an upgrade still runs with the old compose file, which may not set the db's stop_grace_period:
+	// a large database needs this long for its shutdown checkpoint; killed earlier, dbupgrade skips its
+	// maintenance on the next start. A timeout is a maximum: services that stop faster are not held up.
+	stopTimeoutSeconds = "120"
+	composeStop        = "stop --timeout " + stopTimeoutSeconds
+	composeDown        = "down --timeout " + stopTimeoutSeconds
 )
 
 // configuration and logging

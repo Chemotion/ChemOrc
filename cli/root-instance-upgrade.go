@@ -85,7 +85,7 @@ func instanceUpgrade(givenName, use string) {
 	var err error = nil
 	var msg string
 	// shutdown existing instance's docker
-	if _, success, _ = gotoFolder(givenName), callVirtualizer(composeCall+"down --remove-orphans"), gotoFolder("work.dir"); !success {
+	if _, success, _ = gotoFolder(givenName), callVirtualizer(composeCall+composeDown+" --remove-orphans"), gotoFolder("work.dir"); !success {
 		err = toError("compose down failed")
 		msg = toSprintf("Failed to stop %s. Check log. ABORT!", givenName)
 	}
