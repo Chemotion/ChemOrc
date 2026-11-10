@@ -9,6 +9,32 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// The labels for a service or volume in the extended compose file: the existing ones, with the CLI's project
+// label set to `name` (replacing an older value of it). Labels added by an admin, e.g. for a reverse proxy, are kept.
+// Only the list form (`- key=value`) can be edited; a map is reported with ok == false and must be left alone,
+// because viper reads the dots in its keys as nesting.
+func withProjectLabel(existing any, name string) (labels []string, ok bool) {
+	const key = "net.chemotion.cli.project"
+	var current []string
+	switch l := existing.(type) {
+	case nil:
+	case []string:
+		current = l
+	case []any:
+		for _, item := range l {
+			current = append(current, toSprintf("%v", item))
+		}
+	default:
+		return nil, false
+	}
+	for _, label := range current {
+		if label != key && !strings.HasPrefix(label, key+"=") {
+			labels = append(labels, label)
+		}
+	}
+	return append(labels, key+"="+name), true
+}
+
 func upgradeRequired() (toUpgrade []string) {
 	if conf.IsSet(joinKey(stateWord, "latest_eln")) {
 		if latestVersion, err := vercompare.NewVersion(conf.GetString(joinKey(stateWord, "latest_eln"))); err == nil {
@@ -85,7 +111,7 @@ func instanceUpgrade(givenName, use string) {
 	var err error = nil
 	var msg string
 	// shutdown existing instance's docker
-	if _, success, _ = gotoFolder(givenName), callVirtualizer(composeCall+"down --remove-orphans"), gotoFolder("work.dir"); !success {
+	if _, success, _ = gotoFolder(givenName), callVirtualizer(composeCall+composeDown+" --remove-orphans"), gotoFolder("work.dir"); !success {
 		err = toError("compose down failed")
 		msg = toSprintf("Failed to stop %s. Check log. ABORT!", givenName)
 	}
@@ -140,14 +166,22 @@ func instanceUpgrade(givenName, use string) {
 						extendedCompose.Set(joinKey("services", service, "environment"), append(envVars, "OTP_SECRET_KEY="+otp))
 					}
 				}
+				// label every service of the new compose file, including services it adds,
+				// so that status and stats find their containers; volumes only need it
+				// for instances whose extended compose still carries the network entry
+				sections := []string{"services"}
 				if extendedCompose.IsSet(joinKey("networks", "chemotion")) {
-					// reset labels on services and volumes for future identification
-					sections := []string{"services", "volumes"}
-					compose := parseAndPullCompose(chemotionComposeFilename, false)
-					for _, section := range sections {
-						subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services and volumes
-						for _, k := range subheadings {
-							extendedCompose.Set(joinKey(section, k, "labels"), []string{toSprintf("net.chemotion.cli.project=%s", name)})
+					sections = append(sections, "volumes")
+				}
+				compose := parseAndPullCompose(chemotionComposeFilename, false)
+				for _, section := range sections {
+					subheadings := getSubHeadings(&compose, section) // subheadings are the names of the services and volumes
+					for _, k := range subheadings {
+						key := joinKey(section, k, "labels")
+						if labels, ok := withProjectLabel(extendedCompose.Get(key), name); ok {
+							extendedCompose.Set(key, labels)
+						} else {
+							zboth.Warn().Msgf("The labels of %s in %s are not a list; add `net.chemotion.cli.project=%s` to them yourself, so that %s finds this container.", key, cliComposeFilename, name, nameCLI)
 						}
 					}
 				}
@@ -193,7 +227,7 @@ var upgradeInstanceRootCmd = &cobra.Command{
 		if !pull && isInteractive(false) {
 			_, currentVersion, _ := strings.Cut(conf.GetString(joinKey(instancesWord, currentInstance, "image")), "-")
 			if check {
-				use = getComposeAddressToUse(currentVersion, "upgrade to")
+				use = getComposeAddressToUse(currentVersion, "", "upgrade to") // upgrades: every newer version, no lower limit
 			}
 			switch selectOpt([]string{"all actions: pull image, backup and upgrade", "preparation: pull image and backup", "upgrade only (if already prepared)", "pull image only", coloredExit}, "What do you want to do") {
 			case "all actions: pull image, backup and upgrade":

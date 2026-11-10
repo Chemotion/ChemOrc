@@ -240,10 +240,13 @@ func rewriteFirstPortMapping(filename string, hostSide func(prefix string) (newP
 	return
 }
 
+// Evaluate a yq expression on a YAML document. Uses yq's standard YAML decoder (the one the yq command uses):
+// the goccy decoder turned a scalar with a trailing comment (`cpus: 1 # …`) into `!!int '1 # …'`, which Docker
+// Compose cannot parse, and dropped full-line comments.
 func evaluateYamlExpression(inputYaml string, expression string) (string, error) {
 	prefs := yqlib.NewDefaultYamlPreferences()
 	encoder := yqlib.NewYamlEncoder(prefs)
-	decoder := yqlib.NewGoccyYAMLDecoder()
+	decoder := yqlib.NewYamlDecoder(prefs)
 	se := yqlib.NewStringEvaluator()
 	return se.EvaluateAll(expression, inputYaml, encoder, decoder)
 }

@@ -92,7 +92,7 @@ func instanceStart(givenName string) {
 func instanceStop(givenName string) {
 	status := instanceStatus(givenName)
 	if elementInSlice(status, &[]string{"Exited", "Created"}) == -1 {
-		if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+"stop"), gotoFolder("work.dir"); success {
+		if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+composeStop), gotoFolder("work.dir"); success {
 			zboth.Info().Msgf("Successfully stopped instance called %s.", givenName)
 		} else {
 			zboth.Fatal().Msgf("Failed to stop instance called %s.", givenName)

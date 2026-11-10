@@ -21,7 +21,7 @@ func resetInstance(givenName string) (err error) {
 			for _, volume := range volumes {
 				if strings.Contains(volume, "app") {
 					if volume == target {
-						if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+"down"), gotoFolder("work.dir"); !success {
+						if _, success, _ := gotoFolder(givenName), callVirtualizer(composeCall+composeDown), gotoFolder("work.dir"); !success {
 							err = toError("failed to `down` the instance %s because %s", givenName, err.Error())
 							return
 						}
