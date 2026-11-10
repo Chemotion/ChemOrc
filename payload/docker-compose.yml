@@ -126,7 +126,8 @@ services:
     security_opt:
       - no-new-privileges:true
     mem_limit: 1g
-    cpus: 1 # Docker refuses a limit above the host's CPU count; 1 also fits single-CPU hosts
+    # Docker refuses a CPU limit above the host's CPU count; 1 also fits single-CPU hosts.
+    cpus: 1
     pids_limit: 64
     networks:
       - chemotion
