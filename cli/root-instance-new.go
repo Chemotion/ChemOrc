@@ -56,7 +56,7 @@ type elnComposeFile struct {
 }
 
 var elnComposeFiles = []elnComposeFile{
-	{"4.0.2", "feat/eln-3.1.4-4.0.2", false}, // TODO: pin to the version-0.2 commit with the final 4.0.2 payload, before the release
+	{"4.0.2", "5b60739c50ef2742b518615ac57ccec4bc7dc1cc", false},
 	{"4.0.1", "d2f3dc95f76e24e346a8a86f72d9de772bac77c1", true},
 	{"3.1.4", "d1d181e09a3aa4494e4acbbb4f78bc04398a881f", false},
 	{"3.1.2", "df94de05d9011322604c2273666d72461793cea2", true},
