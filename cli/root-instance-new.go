@@ -45,28 +45,44 @@ func offeredVersions(currentVersion, minimumVersion string, orderVersions []stri
 	return
 }
 
-// Every ELN version this CLI offers, newest first, with the commit of this repository whose
+// Every ELN version this CLI knows, newest first, with the commit of this repository whose
 // payload/docker-compose.yml shipped it. The first entry is the latest version known to this release.
 // This is also the record of which compose file belonged to which ELN release: entries are only ever added,
 // pinned to the commit that was released (see the git history of this file for when each was added).
-var elnComposeFiles = []struct{ version, commit string }{
-	{"4.0.2", "feat/eln-3.1.4-4.0.2"}, // TODO: pin to the version-0.2 commit with the final 4.0.2 payload, before the release
-	{"4.0.1", "d2f3dc95f76e24e346a8a86f72d9de772bac77c1"},
-	{"3.1.4", "d1d181e09a3aa4494e4acbbb4f78bc04398a881f"},
-	{"3.1.2", "df94de05d9011322604c2273666d72461793cea2"},
-	{"3.0.0", "666a9f9bf1c0a985942c653972adfeaccbad1b52"},
-	{"2.2.0", "ece196c567e6505afee853f4acf7baedfdd0770e"},
-	{"2.1.1", "8b8765e1279b9b4fbd2748245a3819abd67bae93"},
-	{"1.10.5", "3a9339fe7156da32d786975482aa97c993a997b9"},
-	{"1.9.3", "b7ad83fba1e1db6c5525a11b06bf7eed59a769f6"},
-	{"1.9.2", "f30d8ae2dfdfb0160c3ceef30d5540e404c4f23a"},
-	{"1.8.2", "7a62248a40416586e5d5e7d1a77adb6fe4f360fe"},
-	{"1.8.1", "681cab48409d6c9a6be51ac5903e04890467d998"},
-	{"1.8.0", "0664a5667d06da7898e83a11e31e4b471235daf1"},
-	{"1.7.3", "b8bb1280a6e042b96b8d3e71d030709b113686bc"},
-	{"1.7.2", "b07becc0f421a76aaee6f9e32ed6bf49f942258b"},
-	{"1.6.2", "e577832edaba14fa21ee9aa9288e4b00052729c8"},
-	{"1.5.4", "548ead617a552307f30d5051e72c01d95e99b30f"},
+// A superseded entry is kept as the record but no longer offered, for installs or upgrades.
+type elnComposeFile struct {
+	version, commit string
+	superseded      bool
+}
+
+var elnComposeFiles = []elnComposeFile{
+	{"4.0.2", "feat/eln-3.1.4-4.0.2", false}, // TODO: pin to the version-0.2 commit with the final 4.0.2 payload, before the release
+	{"4.0.1", "d2f3dc95f76e24e346a8a86f72d9de772bac77c1", true},
+	{"3.1.4", "d1d181e09a3aa4494e4acbbb4f78bc04398a881f", false},
+	{"3.1.2", "df94de05d9011322604c2273666d72461793cea2", true},
+	{"3.0.0", "666a9f9bf1c0a985942c653972adfeaccbad1b52", true},
+	{"2.2.0", "ece196c567e6505afee853f4acf7baedfdd0770e", true},
+	{"2.1.1", "8b8765e1279b9b4fbd2748245a3819abd67bae93", true},
+	{"1.10.5", "3a9339fe7156da32d786975482aa97c993a997b9", true},
+	{"1.9.3", "b7ad83fba1e1db6c5525a11b06bf7eed59a769f6", true},
+	{"1.9.2", "f30d8ae2dfdfb0160c3ceef30d5540e404c4f23a", true},
+	{"1.8.2", "7a62248a40416586e5d5e7d1a77adb6fe4f360fe", true},
+	{"1.8.1", "681cab48409d6c9a6be51ac5903e04890467d998", true},
+	{"1.8.0", "0664a5667d06da7898e83a11e31e4b471235daf1", true},
+	{"1.7.3", "b8bb1280a6e042b96b8d3e71d030709b113686bc", true},
+	{"1.7.2", "b07becc0f421a76aaee6f9e32ed6bf49f942258b", true},
+	{"1.6.2", "e577832edaba14fa21ee9aa9288e4b00052729c8", true},
+	{"1.5.4", "548ead617a552307f30d5051e72c01d95e99b30f", true},
+}
+
+// the versions of `table` that may be offered (not superseded), newest first
+func offerableVersions(table []elnComposeFile) (versions []string) {
+	for _, e := range table {
+		if !e.superseded {
+			versions = append(versions, e.version)
+		}
+	}
+	return
 }
 
 // URL of the compose file shipped with an ELN version, at the given commit (or ref) of this repository
@@ -110,11 +126,10 @@ func withLatestELN(offered []string, versions map[string]string, newest, current
 // helper to determine the required compose file; `minimumVersion` limits the versions offered (empty: no limit)
 func getComposeAddressToUse(currentVersion, minimumVersion, action string) (use string) {
 	versions := make(map[string]string)
-	orderVersions := make([]string, 0, len(elnComposeFiles))
 	for _, e := range elnComposeFiles {
 		versions[e.version] = elnComposeURL(e.commit)
-		orderVersions = append(orderVersions, e.version)
 	}
+	orderVersions := offerableVersions(elnComposeFiles)
 	validVersions := offeredVersions(currentVersion, minimumVersion, orderVersions)
 	if conf.IsSet(joinKey(stateWord, "latest_eln")) {
 		validVersions = withLatestELN(validVersions, versions, orderVersions[0], currentVersion, conf.GetString(joinKey(stateWord, "latest_eln")))

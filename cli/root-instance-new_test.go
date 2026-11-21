@@ -108,3 +108,34 @@ func TestWithLatestELN(t *testing.T) {
 		}
 	}
 }
+
+// The menus built from the real table: only entries that are not superseded are offered,
+// for installs and upgrades alike; superseded entries stay in the table as the record.
+func TestOfferedFromTable(t *testing.T) {
+	order := offerableVersions(elnComposeFiles)
+	if len(order) == 0 || order[0] != elnComposeFiles[0].version {
+		t.Fatalf("the newest entry %s must be offered, got %q", elnComposeFiles[0].version, order)
+	}
+	cases := []struct {
+		name, current, minimum string
+		want                   []string
+	}{
+		{"install", "1.3.1", oldestInstallableELN, []string{"4.0.2", "3.1.4"}},
+		{"upgrade from 2.2.0", "2.2.0", "", []string{"4.0.2", "3.1.4"}},
+		{"upgrade from 3.1.2", "3.1.2", "", []string{"4.0.2", "3.1.4"}},
+		{"upgrade from 4.0.1", "4.0.1", "", []string{"4.0.2"}},
+		{"already on 4.0.2", "4.0.2", "", []string{"4.0.2 - current version"}},
+	}
+	for _, c := range cases {
+		if got := offeredVersions(c.current, c.minimum, order); !slices.Equal(got, c.want) {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
+func TestOfferableVersions(t *testing.T) {
+	table := []elnComposeFile{{"5.0.0", "a", false}, {"4.9.0", "b", true}, {"4.8.0", "c", false}}
+	if got := offerableVersions(table); !slices.Equal(got, []string{"5.0.0", "4.8.0"}) {
+		t.Errorf("got %q", got)
+	}
+}
