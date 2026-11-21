@@ -50,7 +50,9 @@ func offeredVersions(currentVersion, minimumVersion string, orderVersions []stri
 // This is also the record of which compose file belonged to which ELN release: entries are only ever added,
 // pinned to the commit that was released (see the git history of this file for when each was added).
 var elnComposeFiles = []struct{ version, commit string }{
+	{"4.0.2", "feat/eln-3.1.4-4.0.2"}, // TODO: pin to the version-0.2 commit with the final 4.0.2 payload, before the release
 	{"4.0.1", "d2f3dc95f76e24e346a8a86f72d9de772bac77c1"},
+	{"3.1.4", "d1d181e09a3aa4494e4acbbb4f78bc04398a881f"},
 	{"3.1.2", "df94de05d9011322604c2273666d72461793cea2"},
 	{"3.0.0", "666a9f9bf1c0a985942c653972adfeaccbad1b52"},
 	{"2.2.0", "ece196c567e6505afee853f4acf7baedfdd0770e"},
