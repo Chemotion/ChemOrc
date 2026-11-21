@@ -1,4 +1,4 @@
-# Chemotion ELN v4.0.1
+# Chemotion ELN v4.0.2
 services:
   dbupgrade:
     image: complat/chemotion:dbupgrade-4.0.1
@@ -45,7 +45,7 @@ services:
       - chemotion
 
   worker:
-    image: complat/chemotion:eln-4.0.1
+    image: complat/chemotion:eln-4.0.2
     restart: unless-stopped
     environment:
       - CONFIG_ROLE=worker
@@ -63,7 +63,7 @@ services:
       - chemotion
 
   eln:
-    image: complat/chemotion:eln-4.0.1
+    image: complat/chemotion:eln-4.0.2
     restart: unless-stopped
     # The first start after an upgrade migrates the database and compiles the assets before the
     # ELN answers (several minutes on a large instance). Give it 20 minutes before a failing
