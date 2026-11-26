@@ -58,7 +58,8 @@ type elnComposeFile struct {
 var elnComposeFiles = []elnComposeFile{
 	{"4.0.2", "5b60739c50ef2742b518615ac57ccec4bc7dc1cc", false},
 	{"4.0.1", "d2f3dc95f76e24e346a8a86f72d9de772bac77c1", true},
-	{"3.1.4", "d1d181e09a3aa4494e4acbbb4f78bc04398a881f", false},
+	{"3.1.5", "d9ffaba347174f52e44cd49d37a3e3c2a715aed1", false},
+	{"3.1.4", "d1d181e09a3aa4494e4acbbb4f78bc04398a881f", true},
 	{"3.1.2", "df94de05d9011322604c2273666d72461793cea2", true},
 	{"3.0.0", "666a9f9bf1c0a985942c653972adfeaccbad1b52", true},
 	{"2.2.0", "ece196c567e6505afee853f4acf7baedfdd0770e", true},

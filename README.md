@@ -29,7 +29,7 @@ ChemCLI tool supports the following versions of Chemotion ELN:
 | ELN Version | `docker-compose.yml` file |
 | ----------- | ------------------------- |
 | [v4.0.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v4.0.2) | [eln-4.0.2](https://raw.githubusercontent.com/Chemotion/ChemOrc/5b60739c50ef2742b518615ac57ccec4bc7dc1cc/payload/docker-compose.yml) |
-| [v3.1.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v3.1.4) | [eln-3.1.4](https://raw.githubusercontent.com/Chemotion/ChemOrc/d1d181e09a3aa4494e4acbbb4f78bc04398a881f/payload/docker-compose.yml) |
+| [v3.1.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v3.1.5) | [eln-3.1.5](https://raw.githubusercontent.com/Chemotion/ChemOrc/d9ffaba347174f52e44cd49d37a3e3c2a715aed1/payload/docker-compose.yml) |
 | [v3.0.x](https://github.com/ComPlat/chemotion_ELN/releases/tag/v3.0.0) | [eln-3.0.0](https://raw.githubusercontent.com/Chemotion/ChemOrc/666a9f9bf1c0a985942c653972adfeaccbad1b52/payload/docker-compose.yml) |
 
 > Support for ELN version 2 ended on 31.10.2026: new instances can no longer be installed with it. Existing version 2 instances can still be upgraded with ChemCLI, also straight to version 4. Chemotion ELN versions 1 and below are no longer supported. Kindly update your instance as soon as possible.
