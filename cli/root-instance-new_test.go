@@ -120,9 +120,10 @@ func TestOfferedFromTable(t *testing.T) {
 		name, current, minimum string
 		want                   []string
 	}{
-		{"install", "1.3.1", oldestInstallableELN, []string{"4.0.2", "3.1.4"}},
-		{"upgrade from 2.2.0", "2.2.0", "", []string{"4.0.2", "3.1.4"}},
-		{"upgrade from 3.1.2", "3.1.2", "", []string{"4.0.2", "3.1.4"}},
+		{"install", "1.3.1", oldestInstallableELN, []string{"4.0.2", "3.1.5"}},
+		{"upgrade from 2.2.0", "2.2.0", "", []string{"4.0.2", "3.1.5"}},
+		{"upgrade from 3.1.2", "3.1.2", "", []string{"4.0.2", "3.1.5"}},
+		{"upgrade from 3.1.4", "3.1.4", "", []string{"4.0.2", "3.1.5"}},
 		{"upgrade from 4.0.1", "4.0.1", "", []string{"4.0.2"}},
 		{"already on 4.0.2", "4.0.2", "", []string{"4.0.2 - current version"}},
 	}
